@@ -3,7 +3,7 @@ const LOCAL_PREVIEW_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 /**
  * Temporary public demo mode. Authentication is bypassed, personal planner
- * queries are replaced by fixtures, and planner mutations are disabled.
+ * queries are replaced by fixtures, and planner changes stay in browser storage.
  * Set PUBLIC_DEMO_MODE to false when account access is ready to come back;
  * the original local launcher bypass remains available for development.
  */

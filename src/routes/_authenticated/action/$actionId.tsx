@@ -54,6 +54,15 @@ import { Input } from "@/components/ui/input";
 import { Divider, EditableSection, PageContainer, Section } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import {
+  reorderLocalPreviewRitualItems,
+  rescheduleLocalPreviewAction,
+  setLocalPreviewActionStatus,
+  toggleLocalPreviewRitualItem,
+  updateLocalPreviewAction,
+  updateLocalPreviewRitualItem,
+  updateLocalPreviewSchedule,
+} from "@/lib/local-preview-store";
 
 export const Route = createFileRoute("/_authenticated/action/$actionId")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -223,6 +232,7 @@ function ActionDetail() {
   const { data: areas = [] } = useLifeAreas();
   const { data: goals = [] } = useGoals();
   const localPreview = isLocalPreviewAuthBypassEnabled();
+  const previewSeedDate = todayKey();
 
   const [sheet, setSheet] = useState<"time" | "duration" | "start" | "move" | null>(null);
   const [moveDate, setMoveDate] = useState<string>(todayKey());
@@ -272,18 +282,34 @@ function ActionDetail() {
 
   const complete = usePlannerMutation(() =>
     localPreview
-      ? Promise.resolve()
+      ? setLocalPreviewActionStatus(
+          previewSeedDate,
+          { actionId, scheduleId: schedule!.id, date },
+          "completed",
+        )
       : markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
   );
 
   const skip = usePlannerMutation(() =>
     localPreview
-      ? Promise.resolve()
+      ? setLocalPreviewActionStatus(
+          previewSeedDate,
+          { actionId, scheduleId: schedule!.id, date },
+          "skipped",
+        )
       : markActionSkipped({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
   );
 
   const move = usePlannerMutation(() => {
-    if (localPreview) return Promise.resolve();
+    if (localPreview) {
+      return rescheduleLocalPreviewAction(previewSeedDate, {
+        scheduleId: schedule!.id,
+        repeatType: schedule!.repeat_type,
+        date: moveDate,
+        startTime: moveTime || null,
+        durationSeconds: moveDuration,
+      });
+    }
     return rescheduleAction({
       scheduleId: schedule!.id,
       repeatType: schedule!.repeat_type,
@@ -294,36 +320,58 @@ function ActionDetail() {
   });
 
   const toggleItem = usePlannerMutation(async (input: { itemId: string; done: boolean }) => {
-    if (localPreview) return;
-    await toggleRitualItem({
-      userId: userId!,
-      ritualItemId: input.itemId,
-      scheduleId: schedule!.id,
-      date,
-      done: input.done,
-    });
+    if (localPreview) {
+      await toggleLocalPreviewRitualItem(previewSeedDate, {
+        ritualItemId: input.itemId,
+        scheduleId: schedule!.id,
+        date,
+        done: input.done,
+      });
+    } else {
+      await toggleRitualItem({
+        userId: userId!,
+        ritualItemId: input.itemId,
+        scheduleId: schedule!.id,
+        date,
+        done: input.done,
+      });
+    }
     // Когда выполнены все пункты — ритуал становится выполненным.
     const nextDone = input.done ? doneCount + 1 : doneCount - 1;
     if (items.length && nextDone >= items.length && !completed) {
-      await markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date });
+      if (localPreview) {
+        await setLocalPreviewActionStatus(
+          previewSeedDate,
+          { actionId, scheduleId: schedule!.id, date },
+          "completed",
+        );
+      } else {
+        await markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date });
+      }
     }
   });
 
   const patch = usePlannerMutation((input: Parameters<typeof updateAction>[1]) =>
-    localPreview ? Promise.resolve() : updateAction(actionId, input),
+    localPreview
+      ? updateLocalPreviewAction(previewSeedDate, actionId, input)
+      : updateAction(actionId, input),
   );
 
   const patchSchedule = usePlannerMutation((input: Parameters<typeof updateSchedule>[1]) =>
-    localPreview ? Promise.resolve() : updateSchedule(schedule!.id, input),
+    localPreview
+      ? updateLocalPreviewSchedule(previewSeedDate, schedule!.id, input)
+      : updateSchedule(schedule!.id, input),
   );
 
   const patchItem = usePlannerMutation(
     (input: { itemId: string; patch: Parameters<typeof updateRitualItem>[1] }) =>
-      localPreview ? Promise.resolve() : updateRitualItem(input.itemId, input.patch),
+      localPreview
+        ? updateLocalPreviewRitualItem(previewSeedDate, input.itemId, input.patch)
+        : updateRitualItem(input.itemId, input.patch),
   );
 
   const reorder = usePlannerMutation((ids: string[]) =>
-    localPreview ? Promise.resolve() : reorderRitualItems(ids),
+    localPreview ? reorderLocalPreviewRitualItems(previewSeedDate, ids) : reorderRitualItems(ids),
   );
 
   const sensors = useSensors(
@@ -369,7 +417,6 @@ function ActionDetail() {
       );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    if (localPreview) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const from = items.findIndex((i) => i.id === active.id);
@@ -390,7 +437,7 @@ function ActionDetail() {
         <PageContainer className="space-y-8">
           {localPreview ? (
             <p className="rounded-[24px] border border-white/80 bg-white/62 px-4 py-3 text-sm text-muted-foreground shadow-mid backdrop-blur-2xl">
-              Демо-режим: редактирование и сохранение отключены.
+              Демо-режим: редактирование включено, изменения сохраняются в этом браузере.
             </p>
           ) : null}
           <section className="space-y-3.5">
@@ -411,27 +458,21 @@ function ActionDetail() {
               emptyText="Добавь название."
               onSave={savePatch("name")}
               saving={patch.isPending}
-              editable={!localPreview}
               multiline={false}
               valueClassName="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]"
             />
 
             <div className="flex flex-wrap items-center gap-2">
               {schedule ? (
-                <EditableChip icon={Clock} onClick={() => setSheet("time")} disabled={localPreview}>
+                <EditableChip icon={Clock} onClick={() => setSheet("time")}>
                   {time ?? "Время"}
                 </EditableChip>
               ) : null}
-              <EditableChip
-                icon={Hourglass}
-                onClick={() => setSheet("duration")}
-                disabled={localPreview}
-              >
+              <EditableChip icon={Hourglass} onClick={() => setSheet("duration")}>
                 {duration ?? "Длительность"}
               </EditableChip>
               <EditableChip
                 icon={Calendar}
-                disabled={localPreview}
                 onClick={() => {
                   setStartDraft(action.start_date);
                   setSheet("start");
@@ -473,7 +514,6 @@ function ActionDetail() {
             emptyText="Добавь описание, чтобы не думать об этом в момент выполнения."
             onSave={savePatch("description")}
             saving={patch.isPending}
-            editable={!localPreview}
           >
             {items.length ? (
               <div className="mt-3 overflow-hidden rounded-[26px] border border-white/80 bg-white/64 shadow-mid backdrop-blur-2xl">
@@ -493,7 +533,7 @@ function ActionDetail() {
                         item={item}
                         done={itemDone(item.id)}
                         disabled={!schedule}
-                        readOnly={localPreview}
+                        readOnly={false}
                         onToggle={() =>
                           toggleItem.mutate({ itemId: item.id, done: !itemDone(item.id) })
                         }
@@ -519,7 +559,6 @@ function ActionDetail() {
             emptyText="Добавь личный смысл — это помогает возвращаться к действию."
             onSave={savePatch("why_important")}
             saving={patch.isPending}
-            editable={!localPreview}
           />
 
           <Divider />
@@ -531,7 +570,6 @@ function ActionDetail() {
             emptyText="Опиши, как это действие приближает тебя к результату."
             onSave={savePatch("helps_with")}
             saving={patch.isPending}
-            editable={!localPreview}
           />
 
           {attachments.length ? (
@@ -562,7 +600,7 @@ function ActionDetail() {
             </>
           ) : null}
 
-          {schedule && !localPreview ? (
+          {schedule ? (
             <StickyActions
               hint={items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined}
             >

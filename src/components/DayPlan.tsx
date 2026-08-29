@@ -16,7 +16,7 @@ import { markActionCompleted, unmarkActionCompleted } from "@/data/completions";
 import { updateSchedule } from "@/data/schedules";
 import { DAY_PARTS, type DayPart } from "@/domain/constants";
 import { groupByDayPart } from "@/domain/occurrences";
-import { dayPartFor } from "@/domain/schedule";
+import { dayPartFor, todayKey } from "@/domain/schedule";
 import type { Occurrence } from "@/domain/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlannerMutation } from "@/hooks/useAppData";
@@ -25,6 +25,11 @@ import { SectionTitle } from "@/components/ui/surface";
 import { cn } from "@/lib/utils";
 import { OccurrenceCard } from "./OccurrenceCard";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import {
+  removeLocalPreviewActionStatus,
+  setLocalPreviewActionStatus,
+  updateLocalPreviewSchedule,
+} from "@/lib/local-preview-store";
 
 /** Время по умолчанию для категории дня при переносе. */
 const DAY_PART_TIME: Record<DayPart, string | null> = {
@@ -94,28 +99,38 @@ function DropSection({
 export function DayPlan({
   occurrences,
   emptyText,
-  onPreviewOccurrencesChange,
 }: {
   occurrences: Occurrence[];
   emptyText: string;
-  onPreviewOccurrencesChange?: (occurrences: Occurrence[]) => void;
 }) {
   const { userId } = useAuth();
   const [dragging, setDragging] = useState(false);
-  const [localOccurrences, setLocalOccurrences] = useState(occurrences);
   const localPreview = isLocalPreviewAuthBypassEnabled();
-  const displayedOccurrences = localPreview
-    ? onPreviewOccurrencesChange
-      ? occurrences
-      : localOccurrences
-    : occurrences;
+  const previewSeedDate = todayKey();
+  const displayedOccurrences = occurrences;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
   );
 
-  const toggle = usePlannerMutation((input: { occurrence: Occurrence; next: boolean }) =>
-    input.next
+  const toggle = usePlannerMutation((input: { occurrence: Occurrence; next: boolean }) => {
+    if (localPreview) {
+      return input.next
+        ? setLocalPreviewActionStatus(
+            previewSeedDate,
+            {
+              actionId: input.occurrence.action.id,
+              scheduleId: input.occurrence.schedule.id,
+              date: input.occurrence.date,
+            },
+            "completed",
+          )
+        : removeLocalPreviewActionStatus(previewSeedDate, {
+            scheduleId: input.occurrence.schedule.id,
+            date: input.occurrence.date,
+          });
+    }
+    return input.next
       ? markActionCompleted({
           userId: userId!,
           actionId: input.occurrence.action.id,
@@ -125,11 +140,15 @@ export function DayPlan({
       : unmarkActionCompleted({
           scheduleId: input.occurrence.schedule.id,
           date: input.occurrence.date,
-        }),
-  );
+        });
+  });
 
   const move = usePlannerMutation((input: { scheduleId: string; startTime: string | null }) =>
-    updateSchedule(input.scheduleId, { start_time: input.startTime }),
+    localPreview
+      ? updateLocalPreviewSchedule(previewSeedDate, input.scheduleId, {
+          start_time: input.startTime,
+        })
+      : updateSchedule(input.scheduleId, { start_time: input.startTime }),
   );
 
   const grouped = groupByDayPart(displayedOccurrences);
@@ -145,18 +164,9 @@ export function DayPlan({
     return <EmptyState icon={CalendarPlus} title="Пока пусто" description={emptyText} />;
   }
 
-  const setPreviewOccurrences = (next: Occurrence[]) => {
-    if (onPreviewOccurrencesChange) onPreviewOccurrencesChange(next);
-    else setLocalOccurrences(next);
-  };
-
   const handleToggle = (occurrence: Occurrence, next: boolean) => {
     if (localPreview) {
-      setPreviewOccurrences(
-        displayedOccurrences.map((item) =>
-          item.key === occurrence.key ? { ...item, completed: next, skipped: false } : item,
-        ),
-      );
+      toggle.mutate({ occurrence, next });
       toast.success(next ? "Действие выполнено" : "Отметка снята");
       return;
     }
@@ -173,17 +183,7 @@ export function DayPlan({
     if (dayPartFor(occ.startTime) === target) return;
     if (localPreview) {
       const startTime = DAY_PART_TIME[target];
-      setPreviewOccurrences(
-        displayedOccurrences.map((item) =>
-          item.key === occ.key
-            ? {
-                ...item,
-                startTime,
-                schedule: { ...item.schedule, start_time: startTime },
-              }
-            : item,
-        ),
-      );
+      move.mutate({ scheduleId: occ.schedule.id, startTime });
       toast.success(
         `${occ.action.name} → ${DAY_PARTS.find((part) => part.key === target)?.title ?? ""}`,
       );

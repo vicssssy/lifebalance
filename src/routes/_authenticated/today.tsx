@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { occurrencesForDate } from "@/domain/occurrences";
 import { formatDayLong, fromDateKey, todayKey } from "@/domain/schedule";
@@ -6,8 +5,6 @@ import { usePlannerSource } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { DayPlan } from "@/components/DayPlan";
 import { DayProgress } from "@/components/DayProgress";
-import type { Occurrence } from "@/domain/types";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/_authenticated/today")({
   head: () => ({
@@ -27,10 +24,7 @@ export const Route = createFileRoute("/_authenticated/today")({
 function TodayScreen() {
   const { source, isLoading } = usePlannerSource();
   const date = todayKey();
-  const sourceOccurrences = occurrencesForDate(source, date);
-  const localPreview = isLocalPreviewAuthBypassEnabled();
-  const [previewOccurrences, setPreviewOccurrences] = useState<Occurrence[] | null>(null);
-  const occurrences = localPreview ? (previewOccurrences ?? sourceOccurrences) : sourceOccurrences;
+  const occurrences = occurrencesForDate(source, date);
 
   return (
     <AppScreen title="Сегодня" subtitle={formatDayLong(fromDateKey(date))}>
@@ -42,7 +36,6 @@ function TodayScreen() {
           <DayPlan
             occurrences={occurrences}
             emptyText="На сегодня пока ничего не запланировано. Нажми ＋, чтобы добавить действие."
-            onPreviewOccurrencesChange={setPreviewOccurrences}
           />
         </>
       )}

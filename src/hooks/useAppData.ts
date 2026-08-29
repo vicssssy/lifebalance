@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchLifeAreas } from "@/data/lifeAreas";
 import { fetchActionLifeAreas, fetchActions, fetchAllRitualItems } from "@/data/actions";
@@ -11,6 +11,11 @@ import type { Goal } from "@/domain/types";
 import { todayKey } from "@/domain/schedule";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 import { createLocalPreviewGoals, createLocalPreviewSource } from "@/lib/local-preview-demo";
+import {
+  LOCAL_PREVIEW_CHANGE_EVENT,
+  LOCAL_PREVIEW_STORAGE_KEY,
+  readLocalPreviewSource,
+} from "@/lib/local-preview-store";
 
 export const queryKeys = {
   lifeAreas: ["life_areas"] as const,
@@ -22,7 +27,30 @@ export const queryKeys = {
   ritualItemCompletions: ["ritual_item_completions"] as const,
   goals: ["goals"] as const,
   reflections: ["reflections"] as const,
+  localPreviewPlanner: ["local_preview_planner"] as const,
 };
+
+function useLocalPreviewPlannerSync(enabled: boolean) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return;
+
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.localPreviewPlanner });
+    };
+    const refreshFromStorage = (event: StorageEvent) => {
+      if (event.key === LOCAL_PREVIEW_STORAGE_KEY) refresh();
+    };
+
+    window.addEventListener(LOCAL_PREVIEW_CHANGE_EVENT, refresh);
+    window.addEventListener("storage", refreshFromStorage);
+    return () => {
+      window.removeEventListener(LOCAL_PREVIEW_CHANGE_EVENT, refresh);
+      window.removeEventListener("storage", refreshFromStorage);
+    };
+  }, [enabled, queryClient]);
+}
 
 export function useLifeAreas() {
   return useQuery({ queryKey: queryKeys.lifeAreas, queryFn: fetchLifeAreas, staleTime: Infinity });
@@ -51,7 +79,16 @@ export function useReflections() {
 /** Все данные, необходимые для расчёта запланированных действий. */
 export function usePlannerSource() {
   const localPreview = isLocalPreviewAuthBypassEnabled();
-  const previewSource = useMemo(() => createLocalPreviewSource(todayKey()), []);
+  const previewSeedDate = todayKey();
+  useLocalPreviewPlannerSync(localPreview);
+  const preview = useQuery<OccurrenceSource>({
+    queryKey: [...queryKeys.localPreviewPlanner, previewSeedDate],
+    queryFn: () => Promise.resolve(readLocalPreviewSource(previewSeedDate)),
+    enabled: localPreview,
+    staleTime: 0,
+    gcTime: Infinity,
+    refetchOnWindowFocus: "always",
+  });
   const actions = useQuery({
     queryKey: queryKeys.actions,
     queryFn: fetchActions,
@@ -84,7 +121,7 @@ export function usePlannerSource() {
   });
 
   const source: OccurrenceSource = localPreview
-    ? previewSource
+    ? (preview.data ?? createLocalPreviewSource(previewSeedDate))
     : {
         actions: actions.data ?? [],
         schedules: schedules.data ?? [],
@@ -119,6 +156,7 @@ export function usePlannerMutation<TInput>(fn: (input: TInput) => Promise<unknow
       queryClient.invalidateQueries({ queryKey: queryKeys.ritualItems });
       queryClient.invalidateQueries({ queryKey: queryKeys.actionLifeAreas });
       queryClient.invalidateQueries({ queryKey: queryKeys.goals });
+      queryClient.invalidateQueries({ queryKey: queryKeys.localPreviewPlanner });
     },
   });
 }
