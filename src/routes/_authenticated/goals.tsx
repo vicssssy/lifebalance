@@ -1,18 +1,35 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, Trophy } from "iconoir-react";
+import {
+  Archive,
+  Check,
+  CheckSquare,
+  Clock,
+  NavArrowRight,
+  Repeat,
+  Sparks,
+  TaskList,
+  Trophy,
+} from "iconoir-react";
 import { toast } from "sonner";
 import { setGoalStatus } from "@/data/goals";
-import { ACTION_FORMAT_NAME } from "@/domain/constants";
+import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
 import { useGoals, useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionTitle } from "@/components/ui/surface";
+import type { AppIcon } from "@/components/ui/icon";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+
+const ACTION_ICON: Record<ActionType, AppIcon> = {
+  ritual: Sparks,
+  regular_action: Repeat,
+  task: CheckSquare,
+  time_slot: Clock,
+  preparation: TaskList,
+};
 
 export const Route = createFileRoute("/_authenticated/goals")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -87,6 +104,7 @@ function GoalsScreen() {
             className="mt-2 rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
             onClick={() => setShowArchive((v) => !v)}
           >
+            <Archive strokeWidth={1.75} aria-hidden />
             {showArchive ? "Активные" : "Архив"}
           </Button>
         )
@@ -108,6 +126,7 @@ function GoalsScreen() {
             className="rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
             onClick={() => setShowArchive((v) => !v)}
           >
+            <Archive strokeWidth={1.75} aria-hidden />
             {showArchive ? "Активные" : "Архив"}
           </Button>
         </div>
@@ -124,61 +143,137 @@ function GoalsScreen() {
           }
         />
       ) : (
-        <div className="animate-rise space-y-7">
+        <div className="animate-rise space-y-8">
           {areasWithGoals.map((area) => (
             <section key={area.id}>
               {!selectedArea ? (
-                <SectionTitle className="mb-2.5 block">
-                  <LifeAreaCategoryLink area={area} className="uppercase tracking-[0.12em]" />
-                </SectionTitle>
+                <div className="mb-3 flex min-w-0 items-center gap-2.5 px-1">
+                  <span
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-secondary/80 text-primary shadow-low"
+                    aria-hidden
+                  >
+                    <Trophy className="size-[18px]" strokeWidth={1.75} />
+                  </span>
+                  <LifeAreaCategoryLink
+                    area={area}
+                    className="min-h-11 w-full min-w-0 justify-between text-[17px] leading-tight tracking-[-0.012em] [&>span]:min-w-0 [&>span]:break-words [&>svg]:size-5"
+                  />
+                </div>
               ) : null}
-              <div className="space-y-2.5">
+              <div className="space-y-7">
                 {visible
                   .filter((g) => g.life_area_id === area.id)
                   .map((goal) => {
                     const actions = source.actions.filter((a) => a.goal_id === goal.id);
                     return (
-                      <Card key={goal.id} className="px-4 py-4">
-                        <p className="text-lg font-semibold leading-snug">{goal.result_text}</p>
+                      <div key={goal.id} className="relative px-1 py-1">
+                        <span
+                          className="absolute bottom-9 left-5 top-9 w-px bg-primary/20"
+                          aria-hidden
+                        />
+
+                        <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
+                          <span
+                            className="z-10 flex size-10 items-center justify-center rounded-full border border-primary/25 bg-background text-primary shadow-low"
+                            aria-hidden
+                          >
+                            <Trophy className="size-[18px]" strokeWidth={1.8} />
+                          </span>
+                          <div className="min-w-0 pb-4 pt-0.5">
+                            <p className="text-[12px] font-medium leading-none text-muted-foreground">
+                              Результат
+                            </p>
+                            <h3 className="mt-2 text-[18px] font-semibold leading-[1.34] tracking-[-0.02em] text-foreground">
+                              {goal.result_text}
+                            </h3>
+                          </div>
+                        </div>
 
                         {actions.length ? (
-                          <ul className="mt-2.5 space-y-1.5">
-                            {actions.map((action) => (
-                              <li key={action.id}>
-                                <Link
-                                  to="/action/$actionId"
-                                  params={{ actionId: action.id }}
-                                  search={{ date: undefined, scheduleId: undefined }}
-                                  className="focus-ring flex min-h-11 items-center justify-between gap-3 rounded-[18px] border border-white/70 bg-white/42 px-3 transition-[background-color,box-shadow] duration-200 hover:bg-white/72 hover:shadow-low"
+                          <div>
+                            {actions.map((action) => {
+                              const ActionIcon = ACTION_ICON[action.type];
+                              return (
+                                <div
+                                  key={action.id}
+                                  className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3"
                                 >
-                                  <span className="text-base">{action.name}</span>
-                                  <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
+                                  <span
+                                    className="z-10 mt-3 flex size-10 items-center justify-center rounded-full border border-primary/30 bg-background text-primary shadow-low"
+                                    aria-hidden
+                                  >
+                                    <ActionIcon className="size-[18px]" strokeWidth={1.75} />
+                                  </span>
+                                  <Link
+                                    to="/action/$actionId"
+                                    params={{ actionId: action.id }}
+                                    search={{ date: undefined, scheduleId: undefined }}
+                                    className="focus-ring group/action flex min-h-20 min-w-0 items-start gap-2 border-t border-white/85 py-3 pl-0.5 pr-1 transition-colors duration-200 hover:text-primary"
+                                  >
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block text-[12px] font-medium leading-none text-muted-foreground">
+                                        Действие
+                                      </span>
+                                      <span className="mt-2 block break-words text-[15px] font-medium leading-[1.38] tracking-[-0.012em] text-foreground transition-colors group-hover/action:text-primary">
+                                        {action.name}
+                                      </span>
+                                      <Badge
+                                        variant="muted"
+                                        className="mt-2 max-w-full bg-secondary/85 text-primary"
+                                      >
+                                        {ACTION_FORMAT_NAME[action.type]}
+                                      </Badge>
+                                    </span>
+                                    <NavArrowRight
+                                      className="mt-6 size-5 shrink-0 text-primary/70 transition-transform group-hover/action:translate-x-0.5"
+                                      strokeWidth={1.75}
+                                      aria-hidden
+                                    />
+                                  </Link>
+                                </div>
+                              );
+                            })}
+                          </div>
                         ) : (
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            Пока нет действий, ведущих к этому результату.
-                          </p>
+                          <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
+                            <span
+                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-full border border-primary/30 bg-background text-primary shadow-low"
+                              aria-hidden
+                            >
+                              <TaskList className="size-[18px]" strokeWidth={1.75} />
+                            </span>
+                            <p className="min-w-0 border-t border-white/85 py-4 text-sm leading-snug text-muted-foreground">
+                              Пока нет действий, ведущих к этому результату.
+                            </p>
+                          </div>
                         )}
 
                         {goal.status === "active" ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-3 rounded-full px-3 text-primary hover:bg-white/60"
-                            loading={complete.isPending}
-                            onClick={() =>
-                              complete.mutate(goal.id, {
-                                onSuccess: () => toast.success("Результат достигнут"),
-                              })
-                            }
-                          >
-                            <Check strokeWidth={1.75} /> Результат достигнут
-                          </Button>
+                          <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
+                            <span
+                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_26px_rgb(96_71_232_/_0.28)]"
+                              aria-hidden
+                            >
+                              <Check className="size-[18px]" strokeWidth={2.25} />
+                            </span>
+                            <div className="border-t border-white/85 pt-2.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start rounded-2xl px-2 text-primary hover:bg-white/60"
+                                loading={complete.isPending}
+                                onClick={() =>
+                                  complete.mutate(goal.id, {
+                                    onSuccess: () => toast.success("Результат достигнут"),
+                                  })
+                                }
+                              >
+                                Результат достигнут
+                              </Button>
+                            </div>
+                          </div>
                         ) : null}
-                      </Card>
+                      </div>
                     );
                   })}
               </div>

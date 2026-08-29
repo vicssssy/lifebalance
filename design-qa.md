@@ -85,4 +85,47 @@
 - Browser checks confirmed five clickable category links on Goals, forward navigation and return navigation, clickable category links on Action detail and New, no remaining visible hashtag category text, and zero console errors.
 - At 320 px, the long Money category title receives the full row and the `Все сферы` / `Архив` controls move below it, preventing the forward view from becoming cramped.
 
+## Goals option 2 redesign QA — 29 August 2026
+
+### Target and normalized evidence
+
+- Source visual truth: `/Users/arthurberlin/.codex/generated_images/01a04d89-378d-74c1-b6ce-002351343915/exec-fe36a3f4-0665-45f7-bc02-9b6d1abfd819.png` (853 × 1844 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/goals-redesign/goals-390x844-final.png` (375 × 812 px from a requested 390 × 844 CSS viewport; the classic scrollbar consumes 15 px).
+- Normalized source: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/goals-redesign/option-2-normalized-375x812.png`; the source was downsampled to the implementation payload dimensions without cropping.
+- Full-view comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/goals-redesign/option2-vs-implementation-final.png` (750 × 812 px, source left and implementation right).
+- Additional responsive captures: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/goals-redesign/goals-320x568-final.png` and `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/goals-redesign/goals-430x932-final.png`.
+- State: public-demo data, Active Goals list, first `Личностное развитие` result fully visible and the next life-area group beginning below it.
+- Density normalization: browser captures use density 1. The generated source was normalized to the same 375 × 812 pixel payload before comparison.
+
+### Comparison history
+
+1. Pass 1 preserved a large rounded glass container around each result. This was a P2 hierarchy mismatch because the selected direction is a flat result ledger and the user specifically rejected the oversized card treatment.
+2. The outer card material, border, and shadow were removed; the rail was aligned to the life-area icon; the Archive control received the selected modern icon; and the same route content was recaptured after the entrance animation settled.
+3. The final side-by-side comparison confirms the flat rail, result/action/completion sequence, compact labels, full-width action text, violet emphasis, and visible continuation into the next category.
+
+### Required fidelity surfaces
+
+- Fonts and typography: the existing native SF stack is retained. Goal text is 18 px semibold with a 1.34 line height; action text is 15 px medium with a 1.38 line height; long Russian content wraps naturally without truncation or narrow one-word columns.
+- Spacing and layout rhythm: the chosen vertical ledger replaces nested cards. Result, action, and completion align to one 40 px icon rail with 44 px or larger interactive targets. The implementation is intentionally more compact than the concept so multiple real life areas remain scannable.
+- Colors and visual tokens: existing `primary`, `secondary`, `background`, `foreground`, `muted-foreground`, border, and shadow tokens reproduce the violet/soft-neutral direction without introducing new brand colors.
+- Image and icon fidelity: the screen has no raster imagery. All icons use the existing Iconoir library; no emoji, handcrafted SVG, CSS illustration, or placeholder asset was added.
+- Copy and content: all existing Russian category names, result text, action names, action-format names, Archive labels, empty states, and completion wording are preserved. Category names remain real links without hashtag styling.
+- Focused-region comparison was not required because the normalized full-view composite renders all relevant type, badges, rail icons, separators, and controls legibly at 1:1 scale.
+
+### Responsive and interaction checks
+
+- 320 × 568, 390 × 844, and 430 × 932 passed with document, main content, action links, category links, and bottom navigation satisfying `scrollWidth <= clientWidth`.
+- Category, Archive, completion, and action-detail targets measure at least 44 px high. The longest action-format labels no longer reserve horizontal space beside the action name.
+- Category forwarding opened `/goals?area=personal_growth`; the selected-area controls fit at 320 px.
+- The first linked action forwarded to `/action/demo-regular-evening` and rendered the existing demo read-only notice.
+- Local demo completion removed one active result; Archive independently changed to the completed-results state and showed the original empty-state treatment when no result was completed.
+- Final browser console check: 0 errors.
+
+### Defect gate
+
+- P0 blockers: none.
+- P1 blockers: none.
+- P2 visual or responsive defects: none after the flat-ledger correction.
+- P3 follow-up: the generated concept uses an abstract dot for the result node, while the implementation deliberately uses the app's existing Iconoir Trophy to honor the approved modern-icon system.
+
 Final result: passed
