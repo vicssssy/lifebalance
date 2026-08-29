@@ -169,4 +169,17 @@
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 
+## Duration wheel defect correction QA — 30 August 2026
+
+- Reported source: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-1756d0b5-cc8e-42db-ac54-0f0193061518.png` (890 × 670 px).
+- Final browser capture: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/duration-picker-redesign/duration-bugfix-390x844.png`.
+- Normalized defect comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/duration-picker-redesign/bug-source-vs-fixed.png`.
+- Corrected the wheel viewport geometry: the top and bottom spacer are now exactly `(viewport height − item height) / 2`, so every selected value aligns mathematically with the central selection band.
+- Unit labels were moved outside the scroll viewport with a dedicated gap. Numbers can no longer overlap `ЧАСЫ`, `МИНУТЫ`, or `СЕКУНДЫ`.
+- A non-zero seconds state was tested directly: value `2`, the scroller center, the selection-band center, and the selected-value center all measured the same Y coordinate at 320, 390, and 430 px.
+- At all three phone widths, the scroller ended 4 px before the unit-label region, both footer buttons remained fully inside the viewport, and `scrollWidth` equalled `clientWidth`.
+- Existing duration calculation, snap settling, Russian terminology, cancellation, submission, action route, and data behavior remain unchanged.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining in the reported picker: none.
+
 Final result: passed

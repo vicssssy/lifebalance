@@ -6,7 +6,8 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 const SECONDS = Array.from({ length: 60 }, (_, i) => i);
 
 const ITEM_HEIGHT = 40;
-const WHEEL_PADDING_ITEMS = 2;
+const WHEEL_HEIGHT = 120;
+const WHEEL_PADDING = (WHEEL_HEIGHT - ITEM_HEIGHT) / 2;
 
 /** Крутилка одного разряда. */
 function Wheel({
@@ -40,6 +41,7 @@ function Wheel({
     <div className="relative min-w-0 flex-1">
       <div
         ref={ref}
+        aria-label={unit}
         onScroll={(e) => {
           const top = e.currentTarget.scrollTop;
           if (settling.current) window.clearTimeout(settling.current);
@@ -49,10 +51,10 @@ function Wheel({
             if (next !== value) onChange(next);
           }, 90);
         }}
-        className="no-scrollbar h-[168px] snap-y snap-mandatory overflow-y-scroll overscroll-contain"
-        style={{ scrollPaddingBlock: ITEM_HEIGHT * WHEEL_PADDING_ITEMS }}
+        className="no-scrollbar h-[120px] snap-y snap-mandatory overflow-y-scroll overscroll-contain"
+        style={{ scrollPaddingBlock: WHEEL_PADDING }}
       >
-        <div style={{ height: ITEM_HEIGHT * WHEEL_PADDING_ITEMS }} />
+        <div style={{ height: WHEEL_PADDING }} />
         {values.map((v) => (
           <div
             key={v}
@@ -64,9 +66,9 @@ function Wheel({
             {v}
           </div>
         ))}
-        <div style={{ height: ITEM_HEIGHT * WHEEL_PADDING_ITEMS }} />
+        <div style={{ height: WHEEL_PADDING }} />
       </div>
-      <p className="pointer-events-none absolute inset-x-0 bottom-0 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">
+      <p className="pointer-events-none mt-1 h-5 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">
         {unit}
       </p>
     </div>
@@ -87,7 +89,7 @@ export function DurationWheels({
 }) {
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-white/85 bg-white/42 px-2 pb-1 shadow-low backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-x-2 top-[84px] h-10 -translate-y-1/2 rounded-[16px] border border-primary/10 bg-secondary/72 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.85)]" />
+      <div className="pointer-events-none absolute inset-x-2 top-[60px] h-10 -translate-y-1/2 rounded-[16px] border border-primary/10 bg-secondary/72 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.85)]" />
       <div className="relative flex gap-1">
         <Wheel values={HOURS} value={hours} onChange={(v) => onChange({ hours: v })} unit="часы" />
         <Wheel
