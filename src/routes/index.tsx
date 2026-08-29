@@ -56,7 +56,7 @@ function Landing() {
           </Link>
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          Данные сохраняются в твоём личном аккаунте.
+          Сейчас приложение открывается в демонстрационном режиме.
         </p>
       </div>
     </div>

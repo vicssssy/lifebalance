@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/surface";
 import { NavArrowLeft as ChevronLeft, NavArrowRight as ChevronRight } from "iconoir-react";
+import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/_authenticated/reflection")({
   head: () => ({
@@ -33,6 +34,7 @@ function ReflectionScreen() {
   const { userId } = useAuth();
   const { source } = usePlannerSource();
   const { data: reflections = [] } = useReflections();
+  const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const [monthDate, setMonthDate] = useState(() => addMonths(new Date(), -1));
   const month = monthStartKey(monthDate);
@@ -46,16 +48,17 @@ function ReflectionScreen() {
     return factsForRange(source, from, to);
   }, [source, monthDate]);
 
-  const save = usePlannerMutation(() =>
-    saveReflection({
+  const save = usePlannerMutation(() => {
+    if (localPreview) return Promise.resolve();
+    return saveReflection({
       userId: userId!,
       month,
       answers: REFLECTION_QUESTIONS.reduce(
         (acc, q) => ({ ...acc, [q.field]: answers[q.field] ?? saved?.[q.field] ?? null }),
         {},
       ),
-    }),
-  );
+    });
+  });
 
   return (
     <AppScreen
@@ -130,10 +133,16 @@ function ReflectionScreen() {
                 onError: () => toast.error("Не удалось сохранить"),
               })
             }
+            disabled={localPreview}
             loading={save.isPending}
           >
             Сохранить рефлексию
           </PrimaryButton>
+          {localPreview ? (
+            <p className="text-center text-sm text-muted-foreground">
+              В демо-режиме ответы не сохраняются.
+            </p>
+          ) : null}
         </section>
       </div>
     </AppScreen>

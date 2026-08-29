@@ -38,7 +38,14 @@ export function useGoals() {
 }
 
 export function useReflections() {
-  return useQuery({ queryKey: queryKeys.reflections, queryFn: fetchReflections });
+  const localPreview = isLocalPreviewAuthBypassEnabled();
+  return useQuery({
+    queryKey: localPreview
+      ? ([...queryKeys.reflections, "local-preview"] as const)
+      : queryKeys.reflections,
+    queryFn: localPreview ? () => Promise.resolve([]) : fetchReflections,
+    staleTime: localPreview ? Infinity : 0,
+  });
 }
 
 /** Все данные, необходимые для расчёта запланированных действий. */

@@ -53,6 +53,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Divider, EditableSection, PageContainer, Section } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
+import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/_authenticated/action/$actionId")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -75,16 +76,19 @@ function EditableChip({
   icon: Icon,
   children,
   onClick,
+  disabled = false,
 }: {
   icon: typeof Clock;
   children: React.ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3.5 text-sm font-medium text-foreground shadow-mid backdrop-blur-2xl transition-[background-color,box-shadow] duration-200 hover:bg-white/84"
+      disabled={disabled}
+      className="focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3.5 text-sm font-medium text-foreground shadow-mid backdrop-blur-2xl transition-[background-color,box-shadow] duration-200 hover:bg-white/84 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
       {children}
@@ -97,12 +101,14 @@ function RitualItemRow({
   item,
   done,
   disabled,
+  readOnly,
   onToggle,
   onEdit,
 }: {
   item: RitualItem;
   done: boolean;
   disabled: boolean;
+  readOnly: boolean;
   onToggle: () => void;
   onEdit: () => void;
 }) {
@@ -124,7 +130,7 @@ function RitualItemRow({
     >
       <button
         type="button"
-        disabled={disabled}
+        disabled={disabled || readOnly}
         onClick={onToggle}
         aria-label={done ? "Снять отметку" : "Отметить пункт"}
         className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-xl"
@@ -141,8 +147,9 @@ function RitualItemRow({
 
       <button
         type="button"
+        disabled={readOnly}
         onClick={onEdit}
-        className="focus-ring min-w-0 flex-1 rounded-xl px-1.5 py-3 text-left"
+        className="focus-ring min-w-0 flex-1 rounded-xl px-1.5 py-3 text-left disabled:cursor-default"
       >
         <span
           className={cn(
@@ -159,10 +166,11 @@ function RitualItemRow({
 
       <button
         type="button"
+        disabled={readOnly}
         aria-label="Изменить порядок"
         {...attributes}
         {...listeners}
-        className="touch-target flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/70"
+        className="touch-target flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/70 disabled:cursor-default disabled:opacity-45"
       >
         <GripVertical className="size-4" strokeWidth={1.75} aria-hidden />
       </button>
@@ -214,6 +222,7 @@ function ActionDetail() {
   const { source, isLoading } = usePlannerSource();
   const { data: areas = [] } = useLifeAreas();
   const { data: goals = [] } = useGoals();
+  const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const [sheet, setSheet] = useState<"time" | "duration" | "start" | "move" | null>(null);
   const [moveDate, setMoveDate] = useState<string>(todayKey());
@@ -232,8 +241,9 @@ function ActionDetail() {
     null;
 
   const { data: attachments = [] } = useQuery({
-    queryKey: ["attachments", actionId],
-    queryFn: () => fetchAttachments(actionId),
+    queryKey: ["attachments", actionId, localPreview ? "local-preview" : "remote"],
+    queryFn: localPreview ? () => Promise.resolve([]) : () => fetchAttachments(actionId),
+    staleTime: localPreview ? Infinity : 0,
   });
 
   const items = source.ritualItems
@@ -261,24 +271,30 @@ function ActionDetail() {
   const doneCount = items.filter((i) => itemDone(i.id)).length;
 
   const complete = usePlannerMutation(() =>
-    markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
+    localPreview
+      ? Promise.resolve()
+      : markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
   );
 
   const skip = usePlannerMutation(() =>
-    markActionSkipped({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
+    localPreview
+      ? Promise.resolve()
+      : markActionSkipped({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
   );
 
-  const move = usePlannerMutation(() =>
-    rescheduleAction({
+  const move = usePlannerMutation(() => {
+    if (localPreview) return Promise.resolve();
+    return rescheduleAction({
       scheduleId: schedule!.id,
       repeatType: schedule!.repeat_type,
       date: moveDate,
       startTime: moveTime || null,
       durationSeconds: moveDuration,
-    }),
-  );
+    });
+  });
 
   const toggleItem = usePlannerMutation(async (input: { itemId: string; done: boolean }) => {
+    if (localPreview) return;
     await toggleRitualItem({
       userId: userId!,
       ritualItemId: input.itemId,
@@ -294,19 +310,21 @@ function ActionDetail() {
   });
 
   const patch = usePlannerMutation((input: Parameters<typeof updateAction>[1]) =>
-    updateAction(actionId, input),
+    localPreview ? Promise.resolve() : updateAction(actionId, input),
   );
 
   const patchSchedule = usePlannerMutation((input: Parameters<typeof updateSchedule>[1]) =>
-    updateSchedule(schedule!.id, input),
+    localPreview ? Promise.resolve() : updateSchedule(schedule!.id, input),
   );
 
   const patchItem = usePlannerMutation(
     (input: { itemId: string; patch: Parameters<typeof updateRitualItem>[1] }) =>
-      updateRitualItem(input.itemId, input.patch),
+      localPreview ? Promise.resolve() : updateRitualItem(input.itemId, input.patch),
   );
 
-  const reorder = usePlannerMutation((ids: string[]) => reorderRitualItems(ids));
+  const reorder = usePlannerMutation((ids: string[]) =>
+    localPreview ? Promise.resolve() : reorderRitualItems(ids),
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -351,6 +369,7 @@ function ActionDetail() {
       );
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (localPreview) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const from = items.findIndex((i) => i.id === active.id);
@@ -369,6 +388,11 @@ function ActionDetail() {
 
       <main className="animate-rise pt-2">
         <PageContainer className="space-y-8">
+          {localPreview ? (
+            <p className="rounded-[24px] border border-white/80 bg-white/62 px-4 py-3 text-sm text-muted-foreground shadow-mid backdrop-blur-2xl">
+              Демо-режим: редактирование и сохранение отключены.
+            </p>
+          ) : null}
           <section className="space-y-3.5">
             <div className="flex items-center gap-2">
               <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>
@@ -387,21 +411,27 @@ function ActionDetail() {
               emptyText="Добавь название."
               onSave={savePatch("name")}
               saving={patch.isPending}
+              editable={!localPreview}
               multiline={false}
               valueClassName="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]"
             />
 
             <div className="flex flex-wrap items-center gap-2">
               {schedule ? (
-                <EditableChip icon={Clock} onClick={() => setSheet("time")}>
+                <EditableChip icon={Clock} onClick={() => setSheet("time")} disabled={localPreview}>
                   {time ?? "Время"}
                 </EditableChip>
               ) : null}
-              <EditableChip icon={Hourglass} onClick={() => setSheet("duration")}>
+              <EditableChip
+                icon={Hourglass}
+                onClick={() => setSheet("duration")}
+                disabled={localPreview}
+              >
                 {duration ?? "Длительность"}
               </EditableChip>
               <EditableChip
                 icon={Calendar}
+                disabled={localPreview}
                 onClick={() => {
                   setStartDraft(action.start_date);
                   setSheet("start");
@@ -443,6 +473,7 @@ function ActionDetail() {
             emptyText="Добавь описание, чтобы не думать об этом в момент выполнения."
             onSave={savePatch("description")}
             saving={patch.isPending}
+            editable={!localPreview}
           >
             {items.length ? (
               <div className="mt-3 overflow-hidden rounded-[26px] border border-white/80 bg-white/64 shadow-mid backdrop-blur-2xl">
@@ -462,6 +493,7 @@ function ActionDetail() {
                         item={item}
                         done={itemDone(item.id)}
                         disabled={!schedule}
+                        readOnly={localPreview}
                         onToggle={() =>
                           toggleItem.mutate({ itemId: item.id, done: !itemDone(item.id) })
                         }
@@ -487,6 +519,7 @@ function ActionDetail() {
             emptyText="Добавь личный смысл — это помогает возвращаться к действию."
             onSave={savePatch("why_important")}
             saving={patch.isPending}
+            editable={!localPreview}
           />
 
           <Divider />
@@ -498,6 +531,7 @@ function ActionDetail() {
             emptyText="Опиши, как это действие приближает тебя к результату."
             onSave={savePatch("helps_with")}
             saving={patch.isPending}
+            editable={!localPreview}
           />
 
           {attachments.length ? (
@@ -528,7 +562,7 @@ function ActionDetail() {
             </>
           ) : null}
 
-          {schedule ? (
+          {schedule && !localPreview ? (
             <StickyActions
               hint={items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined}
             >

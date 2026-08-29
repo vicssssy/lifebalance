@@ -21,6 +21,7 @@ import {
 } from "@/components/planning";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StickyActions } from "@/components/StickyActions";
+import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 
 const TYPES: ActionType[] = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 
@@ -56,6 +57,7 @@ function CreateAction() {
   const navigate = useNavigate();
   const { userId } = useAuth();
   const { data: areas = [] } = useLifeAreas();
+  const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const type = (TYPES.includes(rawType as ActionType) ? rawType : "task") as ActionType;
   const recurring = RECURRING_TYPES.includes(type);
@@ -76,6 +78,7 @@ function CreateAction() {
   const [items, setItems] = useState<RitualItemDraft[]>([{ name: "", description: "" }]);
 
   const save = usePlannerMutation(async () => {
+    if (localPreview) return;
     const goalId =
       search.goalId ??
       (search.resultText && search.lifeAreaId
@@ -134,6 +137,7 @@ function CreateAction() {
     Boolean(name.trim()) &&
     Boolean(startDate) &&
     Boolean(userId) &&
+    !localPreview &&
     (recurring ? weekdays.length > 0 : dates.length > 0) &&
     (type !== "ritual" || items.some((i) => i.name.trim()));
 
@@ -281,7 +285,15 @@ function CreateAction() {
           <AttachmentsField value={attachments} onChange={setAttachments} />
         </Field>
 
-        <StickyActions hint={canSave ? undefined : "Заполни название и выбери, когда это делать"}>
+        <StickyActions
+          hint={
+            localPreview
+              ? "В демо-режиме сохранение отключено"
+              : canSave
+                ? undefined
+                : "Заполни название и выбери, когда это делать"
+          }
+        >
           <PrimaryButton
             onClick={() =>
               save.mutate(undefined as never, {

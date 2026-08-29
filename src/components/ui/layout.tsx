@@ -110,6 +110,7 @@ export function EditableSection({
   valueClassName,
   onSave,
   saving,
+  editable = true,
   children,
 }: {
   title: ReactNode;
@@ -120,6 +121,7 @@ export function EditableSection({
   valueClassName?: string;
   onSave: (next: string) => void | Promise<unknown>;
   saving?: boolean;
+  editable?: boolean;
   children?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
@@ -139,7 +141,7 @@ export function EditableSection({
     <Section
       title={title}
       action={
-        editing ? null : (
+        editing || !editable ? null : (
           <button
             type="button"
             onClick={start}
