@@ -4,6 +4,20 @@ import { createLocalPreviewSource } from "@/lib/local-preview-demo";
 
 const SCHEMA_VERSION = 1;
 const FIXTURE_VERSION = 1;
+const SEEDED_ACTION_IDS = new Set([
+  "demo-ritual-morning",
+  "demo-regular-evening",
+  "demo-task-health-check",
+  "demo-time-slot-focus",
+  "demo-preparation-home",
+]);
+const SEEDED_SCHEDULE_IDS = new Set([
+  "demo-schedule-ritual",
+  "demo-schedule-regular",
+  "demo-schedule-task",
+  "demo-schedule-focus",
+  "demo-schedule-preparation",
+]);
 
 export const LOCAL_PREVIEW_STORAGE_KEY = "lifebalance:demo-planner:v1";
 export const LOCAL_PREVIEW_CHANGE_EVENT = "lifebalance:demo-planner-change";
@@ -166,6 +180,53 @@ function isStoredState(value: unknown): value is LocalPreviewPlannerState {
   );
 }
 
+function migrateStateToDate(
+  state: LocalPreviewPlannerState,
+  seedDate: string,
+): LocalPreviewPlannerState {
+  if (state.seededFor === seedDate) return state;
+  const previousDate = state.seededFor;
+
+  return {
+    ...state,
+    seededFor: seedDate,
+    updatedAt: new Date().toISOString(),
+    source: {
+      ...state.source,
+      actions: state.source.actions.map((action) =>
+        SEEDED_ACTION_IDS.has(action.id) && action.start_date === previousDate
+          ? { ...action, start_date: seedDate }
+          : action,
+      ),
+      schedules: state.source.schedules.map((schedule) =>
+        SEEDED_SCHEDULE_IDS.has(schedule.id) && schedule.scheduled_date === previousDate
+          ? { ...schedule, scheduled_date: seedDate }
+          : schedule,
+      ),
+      completions: state.source.completions.map((completion) =>
+        completion.schedule_id &&
+        SEEDED_SCHEDULE_IDS.has(completion.schedule_id) &&
+        completion.occurrence_date === previousDate
+          ? {
+              ...completion,
+              occurrence_date: seedDate,
+              completed_at: completion.completed_at?.startsWith(previousDate)
+                ? `${seedDate}${completion.completed_at.slice(previousDate.length)}`
+                : completion.completed_at,
+            }
+          : completion,
+      ),
+      ritualItemCompletions: state.source.ritualItemCompletions.map((completion) =>
+        completion.schedule_id &&
+        SEEDED_SCHEDULE_IDS.has(completion.schedule_id) &&
+        completion.occurrence_date === previousDate
+          ? { ...completion, occurrence_date: seedDate }
+          : completion,
+      ),
+    },
+  };
+}
+
 function loadState(seedDate: string): LocalPreviewPlannerState {
   if (typeof window === "undefined") return createState(seedDate);
   if (preferMemoryFallback && memoryFallback) return memoryFallback;
@@ -181,8 +242,17 @@ function loadState(seedDate: string): LocalPreviewPlannerState {
     try {
       const parsed: unknown = JSON.parse(raw);
       if (isStoredState(parsed)) {
-        memoryFallback = parsed;
-        return parsed;
+        const migrated = migrateStateToDate(parsed, seedDate);
+        memoryFallback = migrated;
+        if (migrated !== parsed) {
+          try {
+            window.localStorage.setItem(LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify(migrated));
+            preferMemoryFallback = false;
+          } catch {
+            preferMemoryFallback = true;
+          }
+        }
+        return migrated;
       }
     } catch {
       // Invalid JSON is treated like a version mismatch and reseeded below.
