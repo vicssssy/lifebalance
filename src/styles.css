@@ -1,0 +1,424 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design foundation — см. src/theme.ts (единый источник правды токенов).
+ * Премиальный светлый фундамент: тёплые нейтральные белые и серые,
+ * мягкий контраст, тонкие границы, деликатные тени, rounded-xl как
+ * основной язык поверхностей. Бренд-цвета не придуманы: brand-primary /
+ * brand-accent пока указывают на нейтральную шкалу.
+ */
+
+@theme inline {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+  --font-serif: var(--font-sans);
+
+  /* Радиусы: sm 6 / md 10 / xl 16 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 28px;
+  --radius-2xl: 30px;
+  --radius-3xl: 34px;
+
+  /* Типографика: XS → XL */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.625rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.875rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* Нейтральная шкала 0–1000 */
+  --color-neutral-0: var(--neutral-0);
+  --color-neutral-25: var(--neutral-25);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-1000: var(--neutral-1000);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-brand-primary: var(--primary);
+  --color-brand-accent: var(--accent);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-hint: var(--hint);
+  --color-surface: var(--surface);
+
+  /* Тени: low / mid / high */
+  --shadow-low: 0 6px 18px rgb(35 33 72 / 0.045);
+  --shadow-mid: 0 16px 38px rgb(35 33 72 / 0.085);
+  --shadow-high: 0 24px 64px rgb(35 33 72 / 0.16);
+  /* Совместимость с существующей разметкой */
+  --shadow-soft: var(--shadow-mid);
+  --shadow-lift: var(--shadow-high);
+}
+
+:root {
+  --radius: 28px;
+
+  /* Нейтральная тёплая шкала */
+  --neutral-0: oklch(1 0 0);
+  --neutral-25: oklch(0.99 0.002 85);
+  --neutral-50: oklch(0.985 0.003 85);
+  --neutral-100: oklch(0.973 0.004 85);
+  --neutral-200: oklch(0.945 0.005 85);
+  --neutral-300: oklch(0.905 0.006 85);
+  --neutral-400: oklch(0.84 0.007 85);
+  --neutral-500: oklch(0.72 0.008 85);
+  --neutral-600: oklch(0.6 0.008 85);
+  --neutral-700: oklch(0.5 0.008 85);
+  --neutral-800: oklch(0.38 0.008 85);
+  --neutral-900: oklch(0.28 0.008 85);
+  --neutral-1000: oklch(0.19 0.006 85);
+
+  --background: #f6f7fc;
+  --foreground: #171a2a;
+
+  --surface: #eff0f7;
+  --card: #ffffff;
+  --card-foreground: #171a2a;
+  --popover: var(--neutral-0);
+  --popover-foreground: var(--neutral-900);
+
+  --primary: #6047e8;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f3f0ff;
+  --secondary-foreground: #5540d9;
+
+  --muted: #eff0f7;
+  --muted-foreground: #74788f;
+
+  --accent: #eeeafe;
+  --accent-foreground: #5540d9;
+
+  --destructive: oklch(0.55 0.16 25);
+  --destructive-foreground: var(--neutral-0);
+
+  --border: #e4e5ef;
+  --input: #dde0eb;
+  --ring: #8068f7;
+
+  /* Светлый текст-пример в незаполненных полях */
+  --hint: #9093a6;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    overscroll-behavior-y: none;
+    -webkit-font-smoothing: antialiased;
+    min-width: 280px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+    font-size: 16px; /* не даём iOS зумить при фокусе */
+  }
+
+  textarea {
+    field-sizing: content;
+  }
+
+  ::placeholder {
+    color: var(--color-hint);
+    opacity: 1;
+  }
+}
+
+/*
+ * Every route lives inside the same phone canvas. On a real phone it remains
+ * edge-to-edge; wider screens keep the original document scrolling model and
+ * present that same app inside a focused handset-width canvas.
+ */
+.phone-app-shell {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  margin-inline: auto;
+  background-color: var(--color-background);
+  overflow-x: clip;
+}
+
+@media (min-width: 560px) {
+  body {
+    background:
+      radial-gradient(circle at 50% 0%, rgb(128 104 247 / 0.12), transparent 38%), #ececf2;
+  }
+
+  .phone-app-shell {
+    border-inline: 1px solid rgb(255 255 255 / 0.92);
+    box-shadow:
+      0 36px 90px rgb(35 33 72 / 0.2),
+      0 10px 28px rgb(35 33 72 / 0.08);
+  }
+}
+
+@utility safe-top {
+  padding-top: max(env(safe-area-inset-top), 16px);
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+@utility safe-x {
+  padding-left: max(env(safe-area-inset-left), 1.25rem);
+  padding-right: max(env(safe-area-inset-right), 1.25rem);
+}
+
+/* Единые боковые отступы страницы с учётом safe-area. */
+@utility page-gutter {
+  padding-left: max(env(safe-area-inset-left), clamp(1rem, 4vw, 1.25rem));
+  padding-right: max(env(safe-area-inset-right), clamp(1rem, 4vw, 1.25rem));
+}
+
+@media (min-width: 640px) {
+  .page-gutter {
+    padding-left: max(env(safe-area-inset-left), 1.5rem);
+    padding-right: max(env(safe-area-inset-right), 1.5rem);
+  }
+}
+
+/* Минимальный тач-таргет 44×44 */
+@utility touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Тонкая карточка-строка, основной строительный блок списков */
+@utility row-card {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  border-radius: var(--radius-xl);
+  background-color: color-mix(in oklab, var(--color-card) 74%, transparent);
+  border: 1px solid color-mix(in oklab, white 86%, transparent);
+  backdrop-filter: blur(24px) saturate(145%);
+  box-shadow: var(--shadow-mid);
+  transition:
+    box-shadow 220ms var(--ease-calm),
+    border-color 220ms var(--ease-calm);
+  @media (hover: hover) {
+    &:hover {
+      box-shadow: var(--shadow-mid);
+    }
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-background),
+      0 0 0 4px color-mix(in oklab, var(--color-ring) 70%, transparent);
+  }
+}
+
+@utility row-card-press {
+  &:active {
+    transform: scale(0.985);
+    box-shadow: var(--shadow-low);
+  }
+}
+
+/* Заголовок раздела дня: Утро / День / Вечер / Дополнительно */
+@utility day-part-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-muted-foreground);
+}
+
+@utility field-label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  color: color-mix(in oklab, var(--color-primary) 62%, var(--color-muted-foreground));
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ─────────────── Визуальные эффекты дизайн-системы ───────────────
+ * Спокойный премиальный язык: frosted-glass поверхности,
+ * многослойные мягкие тени, деликатные градиенты, lift/press-отклик.
+ */
+
+@theme inline {
+  --gradient-surface: linear-gradient(
+    180deg,
+    var(--color-neutral-0) 0%,
+    color-mix(in oklab, var(--color-neutral-100) 65%, var(--color-neutral-0)) 100%
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    var(--color-neutral-1000) 0%,
+    var(--color-neutral-800) 100%
+  );
+  --ease-calm: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Матовое стекло: полупрозрачная поверхность + backdrop blur */
+@utility glass-surface {
+  background-color: color-mix(in oklab, var(--color-card) 76%, transparent);
+  border: 1px solid color-mix(in oklab, white 84%, transparent);
+  backdrop-filter: blur(32px) saturate(150%);
+  box-shadow: var(--shadow-mid);
+}
+
+/* Fixed overlays remain inside the same handset-width canvas on every screen. */
+@utility phone-overlay {
+  position: fixed;
+  inset-block: 0;
+  left: 50%;
+  width: 100%;
+  max-width: 430px;
+  transform: translateX(-50%);
+}
+
+/* Shared future-iOS bottom sheet used by pickers and selectors. */
+@utility phone-sheet {
+  border-radius: 36px 36px 0 0;
+  border: 1px solid color-mix(in oklab, white 88%, transparent);
+  background-color: color-mix(in oklab, var(--color-card) 84%, transparent);
+  backdrop-filter: blur(36px) saturate(155%);
+  box-shadow: var(--shadow-high);
+}
+
+/* Деликатный градиент поверхности для карточек-акцентов */
+@utility surface-gradient {
+  background-image: var(--gradient-surface);
+}
+
+/* Подъём на hover, сжатие на нажатии */
+@utility lift {
+  transition:
+    transform 220ms var(--ease-calm),
+    box-shadow 220ms var(--ease-calm);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-mid);
+  }
+  &:active {
+    transform: scale(0.985);
+    box-shadow: var(--shadow-low);
+  }
+}
+
+/* Сдержанное свечение вокруг активного элемента */
+@utility glow {
+  box-shadow:
+    var(--shadow-low),
+    0 0 0 4px color-mix(in oklab, var(--color-primary) 14%, transparent);
+}
+
+@media (max-width: 359px) {
+  .safe-x,
+  .page-gutter {
+    padding-left: max(env(safe-area-inset-left), 1rem);
+    padding-right: max(env(safe-area-inset-right), 1rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-background),
+      0 0 0 4px color-mix(in oklab, var(--color-ring) 70%, transparent);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation: rise-in 320ms var(--ease-calm) both;
+}
