@@ -49,9 +49,11 @@ const DAY_PART_ICON: Record<DayPart, AppIcon> = {
 function DraggableCard({
   occurrence,
   onToggle,
+  maxTitleLines,
 }: {
   occurrence: Occurrence;
   onToggle: (occurrence: Occurrence, next: boolean) => void;
+  maxTitleLines?: 2;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: occurrence.key,
@@ -61,6 +63,7 @@ function DraggableCard({
     <OccurrenceCard
       occurrence={occurrence}
       onToggle={onToggle}
+      {...(maxTitleLines === 2 ? { maxTitleLines } : {})}
       drag={{
         ref: setNodeRef,
         style: transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : {},
@@ -99,9 +102,11 @@ function DropSection({
 export function DayPlan({
   occurrences,
   emptyText,
+  maxTitleLines,
 }: {
   occurrences: Occurrence[];
   emptyText: string;
+  maxTitleLines?: 2;
 }) {
   const { userId } = useAuth();
   const [dragging, setDragging] = useState(false);
@@ -166,8 +171,14 @@ export function DayPlan({
 
   const handleToggle = (occurrence: Occurrence, next: boolean) => {
     if (localPreview) {
-      toggle.mutate({ occurrence, next });
-      toast.success(next ? "Действие выполнено" : "Отметка снята");
+      toggle.mutate(
+        { occurrence, next },
+        {
+          onSuccess: () => toast.success(next ? "Действие выполнено" : "Отметка снята"),
+          onError: (error) =>
+            toast.error(error instanceof Error ? error.message : "Не удалось сохранить"),
+        },
+      );
       return;
     }
     toggle.mutate({ occurrence, next });
@@ -183,9 +194,16 @@ export function DayPlan({
     if (dayPartFor(occ.startTime) === target) return;
     if (localPreview) {
       const startTime = DAY_PART_TIME[target];
-      move.mutate({ scheduleId: occ.schedule.id, startTime });
-      toast.success(
-        `${occ.action.name} → ${DAY_PARTS.find((part) => part.key === target)?.title ?? ""}`,
+      move.mutate(
+        { scheduleId: occ.schedule.id, startTime },
+        {
+          onSuccess: () =>
+            toast.success(
+              `${occ.action.name} → ${DAY_PARTS.find((part) => part.key === target)?.title ?? ""}`,
+            ),
+          onError: (error) =>
+            toast.error(error instanceof Error ? error.message : "Не удалось сохранить"),
+        },
       );
       return;
     }
@@ -221,7 +239,12 @@ export function DayPlan({
               <DropSection part={section.key} active={dragging}>
                 <div className="space-y-2.5">
                   {section.items.map((occ) => (
-                    <DraggableCard key={occ.key} occurrence={occ} onToggle={handleToggle} />
+                    <DraggableCard
+                      key={occ.key}
+                      occurrence={occ}
+                      onToggle={handleToggle}
+                      {...(maxTitleLines === 2 ? { maxTitleLines } : {})}
+                    />
                   ))}
                 </div>
                 {dragging && !section.items.length ? (

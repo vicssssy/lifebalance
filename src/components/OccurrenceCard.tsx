@@ -36,10 +36,12 @@ export function OccurrenceCard({
   occurrence,
   onToggle,
   drag,
+  maxTitleLines,
 }: {
   occurrence: Occurrence;
   onToggle?: (occurrence: Occurrence, next: boolean) => void;
   drag?: DragHandleProps;
+  maxTitleLines?: 2;
 }) {
   const { action, ritualProgress, completed, skipped, startTime, date } = occurrence;
   const time = formatTime(startTime);
@@ -99,6 +101,7 @@ export function OccurrenceCard({
           <p
             className={cn(
               "mt-0.5 text-[13px] font-semibold leading-[1.18] tracking-[-0.012em]",
+              maxTitleLines === 2 && "line-clamp-2",
               muted ? "text-foreground/65" : "text-foreground",
             )}
           >

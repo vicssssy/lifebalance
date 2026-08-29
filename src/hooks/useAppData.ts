@@ -7,13 +7,15 @@ import { fetchCompletions, fetchRitualItemCompletions } from "@/data/completions
 import { fetchGoals } from "@/data/goals";
 import { fetchReflections } from "@/data/reflections";
 import type { OccurrenceSource } from "@/domain/occurrences";
-import type { Goal } from "@/domain/types";
+import type { Goal, Reflection } from "@/domain/types";
 import { todayKey } from "@/domain/schedule";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
-import { createLocalPreviewGoals, createLocalPreviewSource } from "@/lib/local-preview-demo";
+import { createLocalPreviewSource } from "@/lib/local-preview-demo";
 import {
   LOCAL_PREVIEW_CHANGE_EVENT,
   LOCAL_PREVIEW_STORAGE_KEY,
+  readLocalPreviewGoals,
+  readLocalPreviewReflections,
   readLocalPreviewSource,
 } from "@/lib/local-preview-store";
 
@@ -38,6 +40,8 @@ function useLocalPreviewPlannerSync(enabled: boolean) {
 
     const refresh = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.localPreviewPlanner });
+      queryClient.invalidateQueries({ queryKey: queryKeys.goals });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reflections });
     };
     const refreshFromStorage = (event: StorageEvent) => {
       if (event.key === LOCAL_PREVIEW_STORAGE_KEY) refresh();
@@ -60,19 +64,23 @@ export function useGoals() {
   const localPreview = isLocalPreviewAuthBypassEnabled();
   return useQuery<Goal[]>({
     queryKey: localPreview ? ([...queryKeys.goals, "local-preview"] as const) : queryKeys.goals,
-    queryFn: localPreview ? () => Promise.resolve(createLocalPreviewGoals(todayKey())) : fetchGoals,
+    queryFn: localPreview ? () => Promise.resolve(readLocalPreviewGoals(todayKey())) : fetchGoals,
     staleTime: localPreview ? Infinity : 0,
+    refetchOnWindowFocus: localPreview ? "always" : true,
   });
 }
 
 export function useReflections() {
   const localPreview = isLocalPreviewAuthBypassEnabled();
-  return useQuery({
+  return useQuery<Reflection[]>({
     queryKey: localPreview
       ? ([...queryKeys.reflections, "local-preview"] as const)
       : queryKeys.reflections,
-    queryFn: localPreview ? () => Promise.resolve([]) : fetchReflections,
+    queryFn: localPreview
+      ? () => Promise.resolve(readLocalPreviewReflections(todayKey()))
+      : fetchReflections,
     staleTime: localPreview ? Infinity : 0,
+    refetchOnWindowFocus: localPreview ? "always" : true,
   });
 }
 
@@ -156,6 +164,7 @@ export function usePlannerMutation<TInput>(fn: (input: TInput) => Promise<unknow
       queryClient.invalidateQueries({ queryKey: queryKeys.ritualItems });
       queryClient.invalidateQueries({ queryKey: queryKeys.actionLifeAreas });
       queryClient.invalidateQueries({ queryKey: queryKeys.goals });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reflections });
       queryClient.invalidateQueries({ queryKey: queryKeys.localPreviewPlanner });
     },
   });

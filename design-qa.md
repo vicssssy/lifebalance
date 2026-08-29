@@ -128,4 +128,32 @@
 - P2 visual or responsive defects: none after the flat-ledger correction.
 - P3 follow-up: the generated concept uses an abstract dot for the result node, while the implementation deliberately uses the app's existing Iconoir Trophy to honor the approved modern-icon system.
 
+## Today permanent-app and two-line card-title QA — 30 August 2026
+
+### Source and normalized evidence
+
+- Source visual truth: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-aaf2351b-400f-421f-bfb7-e145ff2a9891.png` (876 × 1760 px). The annotation identifies the former three-line task title on Today.
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/live-today-qa/today-390x844.png` (375 × 812 px from a requested 390 × 844 CSS viewport; the classic scrollbar consumes 15 px).
+- Normalized full-view comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/live-today-qa/source-vs-implementation.png` (774 × 850 px).
+- Focused task-card comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/live-today-qa/task-card-before-after.png` (1280 × 320 px). It confirms the highlighted three-line title now ends with a native ellipsis after line two.
+- Additional responsive captures: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/live-today-qa/today-320x568.png` and `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/live-today-qa/today-430x932.png`.
+- State disclosure: the source has 0 of 5 actions completed and the implementation has 2 of 5. That intentional data-state difference does not affect the title-clamp comparison.
+
+### Visual and interaction findings
+
+- The reported Today card was a P2 density defect: long Russian action names expanded to three or more lines. Today now applies a two-line CSS clamp with a native overflow ellipsis while retaining the complete title in the link's DOM and accessible name.
+- The clamp is opt-in through Today → DayPlan → OccurrenceCard. Calendar uses the same card component without the clamp and remains visually and behaviorally unchanged.
+- At requested 320 × 568, 390 × 844, and 430 × 932 viewports, every tested Today title computed `-webkit-line-clamp: 2`, `overflow: hidden`, and a title height no greater than two line heights. No horizontal overflow was present.
+- Typography, spacing, colors, Iconoir icons, Russian copy, completion controls, metadata, action links, drag handles, route parameters, and product navigation are unchanged by the clamp.
+- The public no-sign-in workspace is now the permanent application mode. `/` and `/auth` both forward to `/today`; no sign-in or demo-mode notice remains.
+- Existing planner edits, completion, skipping, moving, ritual progress and order, new actions and optional goals, URL attachments, goal completion, and monthly reflection answers persist in the browser. Existing stored planner data is migrated in place, starter content is seeded only once, and historical dates are no longer rolled forward each day.
+- Browser flow checks covered root/auth forwarding, action creation, optional goal creation, Goal completion and Archive persistence, Reflection saving, URL attachment persistence, action-detail editing, reload persistence, and Today rendering. The fresh-browser console contained 0 errors and 0 warnings.
+- TypeScript, targeted ESLint, shell syntax, production build, and Wrangler dry-run passed. Existing production Supabase data functions and authenticated branches remain intact.
+
+### Defect gate
+
+- P0 blockers: none.
+- P1 blockers: none.
+- P2 visual or functional defects: none after the Today clamp and permanent-app persistence pass.
+
 Final result: passed

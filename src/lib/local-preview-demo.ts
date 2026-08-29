@@ -3,7 +3,7 @@ import type { Action, Completion, Goal, RitualItem, Schedule } from "@/domain/ty
 
 const EVERY_DAY = [1, 2, 3, 4, 5, 6, 7];
 
-/** Results are grouped by the existing life-area methodology used on “Мои цели”. */
+/** Starter results grouped by the existing life-area methodology used on “Мои цели”. */
 export function createLocalPreviewGoals(date: string): Goal[] {
   const createdAt = `${date}T06:00:00.000Z`;
 
@@ -62,8 +62,8 @@ export function createLocalPreviewGoals(date: string): Goal[] {
 }
 
 /**
- * Five substantial examples for the local, sign-in-free visual preview.
- * Production data always continues to come from Supabase.
+ * Five substantial starter examples for the sign-in-free browser-local app.
+ * The authenticated data path continues to use Supabase unchanged.
  */
 export function createLocalPreviewSource(date: string): OccurrenceSource {
   const createdAt = `${date}T06:00:00.000Z`;

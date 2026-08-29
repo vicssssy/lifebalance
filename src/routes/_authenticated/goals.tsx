@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { setGoalStatus } from "@/data/goals";
 import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
+import { todayKey } from "@/domain/schedule";
 import { useGoals, useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { AppIcon } from "@/components/ui/icon";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import { setLocalPreviewGoalStatus } from "@/lib/local-preview-store";
 
 const ACTION_ICON: Record<ActionType, AppIcon> = {
   ritual: Sparks,
@@ -56,24 +58,16 @@ function GoalsScreen() {
   const { data: goals = [] } = useGoals();
   const { source } = usePlannerSource();
   const [showArchive, setShowArchive] = useState(false);
-  const [previewCompleted, setPreviewCompleted] = useState<Set<string>>(() => new Set());
   const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const complete = usePlannerMutation(async (goalId: string) => {
     if (localPreview) {
-      setPreviewCompleted((current) => new Set(current).add(goalId));
-      return;
+      return setLocalPreviewGoalStatus(todayKey(), goalId, "completed");
     }
     await setGoalStatus(goalId, "completed");
   });
 
-  const displayGoals = localPreview
-    ? goals.map((goal) =>
-        previewCompleted.has(goal.id)
-          ? { ...goal, status: "completed" as const, completed_at: new Date().toISOString() }
-          : goal,
-      )
-    : goals;
+  const displayGoals = goals;
 
   const selectedArea = areas.find((area) => area.id === search.area) ?? null;
 

@@ -1,14 +1,13 @@
-const PUBLIC_DEMO_MODE = true;
+const BROWSER_LOCAL_APP_MODE = true;
 const LOCAL_PREVIEW_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 /**
- * Temporary public demo mode. Authentication is bypassed, personal planner
- * queries are replaced by fixtures, and planner changes stay in browser storage.
- * Set PUBLIC_DEMO_MODE to false when account access is ready to come back;
- * the original local launcher bypass remains available for development.
+ * Permanent sign-in-free application mode. Personal planner data is stored in
+ * the current browser while the original authenticated Supabase path remains
+ * available for a future account-enabled release.
  */
 export function isLocalPreviewAuthBypassEnabled(): boolean {
-  if (PUBLIC_DEMO_MODE) return true;
+  if (BROWSER_LOCAL_APP_MODE) return true;
   if (!import.meta.env.DEV || import.meta.env["VITE_SKIP_AUTH"] !== "true") return false;
   if (typeof window === "undefined") return true;
   return LOCAL_PREVIEW_HOSTS.has(window.location.hostname);

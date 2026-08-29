@@ -22,6 +22,7 @@ import {
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StickyActions } from "@/components/StickyActions";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import { createLocalPreviewAction } from "@/lib/local-preview-store";
 
 const TYPES: ActionType[] = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 
@@ -78,19 +79,6 @@ function CreateAction() {
   const [items, setItems] = useState<RitualItemDraft[]>([{ name: "", description: "" }]);
 
   const save = usePlannerMutation(async () => {
-    if (localPreview) return;
-    const goalId =
-      search.goalId ??
-      (search.resultText && search.lifeAreaId
-        ? (
-            await createGoal({
-              userId: userId!,
-              lifeAreaId: search.lifeAreaId,
-              resultText: search.resultText,
-            })
-          ).id
-        : null);
-
     const schedules: ScheduleDraft[] = recurring
       ? weekdays.length
         ? [
@@ -110,6 +98,47 @@ function CreateAction() {
           start_time: startTime,
           duration_seconds: durationSeconds,
         }));
+
+    if (localPreview) {
+      return createLocalPreviewAction(todayKey(), {
+        goalId: search.goalId ?? null,
+        newGoal:
+          !search.goalId && search.resultText && search.lifeAreaId
+            ? { lifeAreaId: search.lifeAreaId, resultText: search.resultText }
+            : null,
+        name: name.trim(),
+        type,
+        description: description.trim() || null,
+        durationSeconds,
+        whyImportant: whyImportant.trim() || null,
+        helpsWith: search.helpsWith ?? null,
+        startDate,
+        lifeAreaIds,
+        ritualItems:
+          type === "ritual"
+            ? items
+                .filter((item) => item.name.trim())
+                .map((item) => ({
+                  name: item.name.trim(),
+                  description: item.description.trim() || null,
+                }))
+            : [],
+        attachments,
+        schedules,
+      });
+    }
+
+    const goalId =
+      search.goalId ??
+      (search.resultText && search.lifeAreaId
+        ? (
+            await createGoal({
+              userId: userId!,
+              lifeAreaId: search.lifeAreaId,
+              resultText: search.resultText,
+            })
+          ).id
+        : null);
 
     return createAction({
       userId: userId!,
@@ -136,8 +165,7 @@ function CreateAction() {
   const canSave =
     Boolean(name.trim()) &&
     Boolean(startDate) &&
-    Boolean(userId) &&
-    !localPreview &&
+    (localPreview || Boolean(userId)) &&
     (recurring ? weekdays.length > 0 : dates.length > 0) &&
     (type !== "ritual" || items.some((i) => i.name.trim()));
 
@@ -285,15 +313,7 @@ function CreateAction() {
           <AttachmentsField value={attachments} onChange={setAttachments} />
         </Field>
 
-        <StickyActions
-          hint={
-            localPreview
-              ? "В демо-режиме сохранение отключено"
-              : canSave
-                ? undefined
-                : "Заполни название и выбери, когда это делать"
-          }
-        >
+        <StickyActions hint={canSave ? undefined : "Заполни название и выбери, когда это делать"}>
           <PrimaryButton
             onClick={() =>
               save.mutate(undefined as never, {

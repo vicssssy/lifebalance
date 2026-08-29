@@ -1,10 +1,14 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparks as Sparkles } from "iconoir-react";
+import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    if (isLocalPreviewAuthBypassEnabled()) throw redirect({ to: "/today" });
+  },
   head: () => ({
     meta: [
       { title: "Путь — от сфер жизни к ежедневным действиям" },
@@ -55,9 +59,6 @@ function Landing() {
             Начать <ArrowRight aria-hidden />
           </Link>
         </Button>
-        <p className="text-center text-sm text-muted-foreground">
-          Сейчас приложение открывается в демонстрационном режиме.
-        </p>
       </div>
     </div>
   );

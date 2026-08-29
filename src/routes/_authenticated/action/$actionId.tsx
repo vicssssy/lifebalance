@@ -55,6 +55,7 @@ import { Divider, EditableSection, PageContainer, Section } from "@/components/u
 import { cn } from "@/lib/utils";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 import {
+  readLocalPreviewAttachments,
   reorderLocalPreviewRitualItems,
   rescheduleLocalPreviewAction,
   setLocalPreviewActionStatus,
@@ -252,7 +253,9 @@ function ActionDetail() {
 
   const { data: attachments = [] } = useQuery({
     queryKey: ["attachments", actionId, localPreview ? "local-preview" : "remote"],
-    queryFn: localPreview ? () => Promise.resolve([]) : () => fetchAttachments(actionId),
+    queryFn: localPreview
+      ? () => Promise.resolve(readLocalPreviewAttachments(previewSeedDate, actionId))
+      : () => fetchAttachments(actionId),
     staleTime: localPreview ? Infinity : 0,
   });
 
@@ -435,11 +438,6 @@ function ActionDetail() {
 
       <main className="animate-rise pt-2">
         <PageContainer className="space-y-8">
-          {localPreview ? (
-            <p className="rounded-[24px] border border-white/80 bg-white/62 px-4 py-3 text-sm text-muted-foreground shadow-mid backdrop-blur-2xl">
-              Демо-режим: редактирование включено, изменения сохраняются в этом браузере.
-            </p>
-          ) : null}
           <section className="space-y-3.5">
             <div className="flex items-center gap-2">
               <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>

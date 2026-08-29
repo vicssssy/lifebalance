@@ -5,28 +5,28 @@ set -e
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 PROJECT_DIR="${0:A:h}"
-PREVIEW_PORT=8080
+APP_PORT=8080
 
-while lsof -nP -iTCP:"$PREVIEW_PORT" -sTCP:LISTEN >/dev/null 2>&1; do
-  PREVIEW_PORT=$((PREVIEW_PORT + 1))
-  if [ "$PREVIEW_PORT" -gt 8090 ]; then
-    echo "No free preview port was found between 8080 and 8090."
+while lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN >/dev/null 2>&1; do
+  APP_PORT=$((APP_PORT + 1))
+  if [ "$APP_PORT" -gt 8090 ]; then
+    echo "No free app port was found between 8080 and 8090."
     read "REPLY?Press Return to close..."
     exit 1
   fi
 done
 
-PREVIEW_URL="http://127.0.0.1:${PREVIEW_PORT}/today"
+APP_URL="http://127.0.0.1:${APP_PORT}/today"
 
 cd "$PROJECT_DIR"
 clear 2>/dev/null || true
 
-echo "My Daily Flow — local preview"
-echo "Sign-in is temporarily hidden in this local preview."
+echo "My Daily Flow — local app"
+echo "The app opens directly without sign-in."
 echo ""
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-  echo "Node.js is required to run this preview."
+  echo "Node.js is required to run this app."
   echo "Install it from https://nodejs.org and open this file again."
   echo ""
   read "REPLY?Press Return to close..."
@@ -34,7 +34,7 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
 fi
 
 if [ ! -d node_modules ]; then
-  echo "Preparing the app for the first preview..."
+  echo "Preparing the app for the first launch..."
   if command -v bun >/dev/null 2>&1; then
     bun install --frozen-lockfile
   else
@@ -47,7 +47,7 @@ if [ ! -d node_modules ]; then
 fi
 
 echo "Starting My Daily Flow..."
-VITE_SKIP_AUTH=true npm run dev -- --host 127.0.0.1 --port "$PREVIEW_PORT" --strictPort &
+npm run dev -- --host 127.0.0.1 --port "$APP_PORT" --strictPort &
 SERVER_PID=$!
 
 cleanup() {
@@ -59,11 +59,11 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 for attempt in {1..60}; do
-  if curl --silent --fail "$PREVIEW_URL" >/dev/null 2>&1; then
-    open "$PREVIEW_URL"
+  if curl --silent --fail "$APP_URL" >/dev/null 2>&1; then
+    open "$APP_URL"
     echo ""
-    echo "Preview opened in your browser:"
-    echo "$PREVIEW_URL"
+    echo "App opened in your browser:"
+    echo "$APP_URL"
     echo ""
     echo "Keep this window open while viewing the app."
     echo "Press Control+C here when you are finished."
@@ -73,7 +73,7 @@ for attempt in {1..60}; do
 
   if ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then
     echo ""
-    echo "The preview could not start. Review the message above."
+    echo "The app could not start. Review the message above."
     read "REPLY?Press Return to close..."
     exit 1
   fi
@@ -82,6 +82,6 @@ for attempt in {1..60}; do
 done
 
 echo ""
-echo "The preview took too long to start."
+echo "The app took too long to start."
 read "REPLY?Press Return to close..."
 exit 1

@@ -1,23 +1,17 @@
 import type { OccurrenceSource } from "@/domain/occurrences";
-import type { Action, Completion, RitualItem, Schedule } from "@/domain/types";
-import { createLocalPreviewSource } from "@/lib/local-preview-demo";
+import type {
+  Action,
+  Attachment,
+  Completion,
+  Goal,
+  Reflection,
+  RitualItem,
+  Schedule,
+} from "@/domain/types";
+import { createLocalPreviewGoals, createLocalPreviewSource } from "@/lib/local-preview-demo";
 
 const SCHEMA_VERSION = 1;
 const FIXTURE_VERSION = 1;
-const SEEDED_ACTION_IDS = new Set([
-  "demo-ritual-morning",
-  "demo-regular-evening",
-  "demo-task-health-check",
-  "demo-time-slot-focus",
-  "demo-preparation-home",
-]);
-const SEEDED_SCHEDULE_IDS = new Set([
-  "demo-schedule-ritual",
-  "demo-schedule-regular",
-  "demo-schedule-task",
-  "demo-schedule-focus",
-  "demo-schedule-preparation",
-]);
 
 export const LOCAL_PREVIEW_STORAGE_KEY = "lifebalance:demo-planner:v1";
 export const LOCAL_PREVIEW_CHANGE_EVENT = "lifebalance:demo-planner-change";
@@ -28,6 +22,9 @@ interface LocalPreviewPlannerState {
   seededFor: string;
   updatedAt: string;
   source: OccurrenceSource;
+  goals: Goal[];
+  reflections: Reflection[];
+  attachments: Attachment[];
 }
 
 export type LocalPreviewActionPatch = Partial<
@@ -45,6 +42,43 @@ export type LocalPreviewRitualItemPatch = Partial<
   Pick<RitualItem, "name" | "description" | "duration_seconds" | "sort_order">
 >;
 
+export interface LocalPreviewGoalDraft {
+  lifeAreaId: string;
+  resultText: string;
+}
+
+export interface LocalPreviewActionDraft {
+  goalId: string | null;
+  newGoal?: LocalPreviewGoalDraft | null;
+  name: string;
+  type: Action["type"];
+  description: string | null;
+  durationSeconds: number | null;
+  whyImportant: string | null;
+  helpsWith: string | null;
+  startDate: string;
+  lifeAreaIds: string[];
+  ritualItems: Array<{
+    name: string;
+    description: string | null;
+    durationSeconds?: number | null;
+  }>;
+  attachments: Array<Pick<Attachment, "type" | "url" | "title">>;
+  schedules: Array<
+    Pick<
+      Schedule,
+      "repeat_type" | "scheduled_date" | "weekdays" | "start_time" | "duration_seconds"
+    >
+  >;
+}
+
+export type LocalPreviewReflectionAnswers = Partial<
+  Pick<
+    Reflection,
+    "real_result" | "effective_actions" | "obstacles" | "system_change" | "next_experiment"
+  >
+>;
+
 let memoryFallback: LocalPreviewPlannerState | null = null;
 let preferMemoryFallback = false;
 
@@ -55,6 +89,9 @@ function createState(seedDate: string): LocalPreviewPlannerState {
     seededFor: seedDate,
     updatedAt: new Date().toISOString(),
     source: createLocalPreviewSource(seedDate),
+    goals: createLocalPreviewGoals(seedDate),
+    reflections: [],
+    attachments: [],
   };
 }
 
@@ -149,6 +186,43 @@ function isActionLifeArea(value: unknown): boolean {
   );
 }
 
+function isGoal(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value["id"] === "string" &&
+    typeof value["life_area_id"] === "string" &&
+    typeof value["result_text"] === "string" &&
+    ["active", "completed", "cancelled"].includes(String(value["status"])) &&
+    typeof value["created_at"] === "string" &&
+    isNullableString(value["completed_at"]) &&
+    isNullableString(value["archived_at"])
+  );
+}
+
+function isReflection(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value["id"] === "string" &&
+    typeof value["month"] === "string" &&
+    isNullableString(value["real_result"]) &&
+    isNullableString(value["effective_actions"]) &&
+    isNullableString(value["obstacles"]) &&
+    isNullableString(value["system_change"]) &&
+    isNullableString(value["next_experiment"])
+  );
+}
+
+function isAttachment(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value["id"] === "string" &&
+    typeof value["action_id"] === "string" &&
+    ["video", "audio", "link"].includes(String(value["type"])) &&
+    typeof value["url"] === "string" &&
+    isNullableString(value["title"])
+  );
+}
+
 function isOccurrenceSource(value: unknown): value is OccurrenceSource {
   if (!value || typeof value !== "object") return false;
   const source = value as Partial<OccurrenceSource>;
@@ -168,62 +242,53 @@ function isOccurrenceSource(value: unknown): value is OccurrenceSource {
   );
 }
 
-function isStoredState(value: unknown): value is LocalPreviewPlannerState {
-  if (!value || typeof value !== "object") return false;
-  const state = value as Partial<LocalPreviewPlannerState>;
-  return (
-    state.schemaVersion === SCHEMA_VERSION &&
-    state.fixtureVersion === FIXTURE_VERSION &&
-    typeof state.seededFor === "string" &&
-    typeof state.updatedAt === "string" &&
-    isOccurrenceSource(state.source)
-  );
-}
+function upgradeStoredState(
+  value: unknown,
+): { state: LocalPreviewPlannerState; upgraded: boolean } | null {
+  if (!isRecord(value)) return null;
+  if (
+    value["schemaVersion"] !== SCHEMA_VERSION ||
+    value["fixtureVersion"] !== FIXTURE_VERSION ||
+    typeof value["seededFor"] !== "string" ||
+    typeof value["updatedAt"] !== "string" ||
+    !isOccurrenceSource(value["source"])
+  ) {
+    return null;
+  }
 
-function migrateStateToDate(
-  state: LocalPreviewPlannerState,
-  seedDate: string,
-): LocalPreviewPlannerState {
-  if (state.seededFor === seedDate) return state;
-  const previousDate = state.seededFor;
+  const goalsValue = value["goals"];
+  const reflectionsValue = value["reflections"];
+  const attachmentsValue = value["attachments"];
+  if (goalsValue !== undefined && (!Array.isArray(goalsValue) || !goalsValue.every(isGoal))) {
+    return null;
+  }
+  if (
+    reflectionsValue !== undefined &&
+    (!Array.isArray(reflectionsValue) || !reflectionsValue.every(isReflection))
+  ) {
+    return null;
+  }
+  if (
+    attachmentsValue !== undefined &&
+    (!Array.isArray(attachmentsValue) || !attachmentsValue.every(isAttachment))
+  ) {
+    return null;
+  }
 
+  const upgraded =
+    goalsValue === undefined || reflectionsValue === undefined || attachmentsValue === undefined;
   return {
-    ...state,
-    seededFor: seedDate,
-    updatedAt: new Date().toISOString(),
-    source: {
-      ...state.source,
-      actions: state.source.actions.map((action) =>
-        SEEDED_ACTION_IDS.has(action.id) && action.start_date === previousDate
-          ? { ...action, start_date: seedDate }
-          : action,
-      ),
-      schedules: state.source.schedules.map((schedule) =>
-        SEEDED_SCHEDULE_IDS.has(schedule.id) && schedule.scheduled_date === previousDate
-          ? { ...schedule, scheduled_date: seedDate }
-          : schedule,
-      ),
-      completions: state.source.completions.map((completion) =>
-        completion.schedule_id &&
-        SEEDED_SCHEDULE_IDS.has(completion.schedule_id) &&
-        completion.occurrence_date === previousDate
-          ? {
-              ...completion,
-              occurrence_date: seedDate,
-              completed_at: completion.completed_at?.startsWith(previousDate)
-                ? `${seedDate}${completion.completed_at.slice(previousDate.length)}`
-                : completion.completed_at,
-            }
-          : completion,
-      ),
-      ritualItemCompletions: state.source.ritualItemCompletions.map((completion) =>
-        completion.schedule_id &&
-        SEEDED_SCHEDULE_IDS.has(completion.schedule_id) &&
-        completion.occurrence_date === previousDate
-          ? { ...completion, occurrence_date: seedDate }
-          : completion,
-      ),
+    state: {
+      schemaVersion: SCHEMA_VERSION,
+      fixtureVersion: FIXTURE_VERSION,
+      seededFor: value["seededFor"],
+      updatedAt: value["updatedAt"],
+      source: value["source"],
+      goals: (goalsValue as Goal[] | undefined) ?? createLocalPreviewGoals(value["seededFor"]),
+      reflections: (reflectionsValue as Reflection[] | undefined) ?? [],
+      attachments: (attachmentsValue as Attachment[] | undefined) ?? [],
     },
+    upgraded,
   };
 }
 
@@ -241,18 +306,18 @@ function loadState(seedDate: string): LocalPreviewPlannerState {
   if (raw) {
     try {
       const parsed: unknown = JSON.parse(raw);
-      if (isStoredState(parsed)) {
-        const migrated = migrateStateToDate(parsed, seedDate);
-        memoryFallback = migrated;
-        if (migrated !== parsed) {
+      const restored = upgradeStoredState(parsed);
+      if (restored) {
+        memoryFallback = restored.state;
+        if (restored.upgraded) {
           try {
-            window.localStorage.setItem(LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify(migrated));
+            window.localStorage.setItem(LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify(restored.state));
             preferMemoryFallback = false;
           } catch {
             preferMemoryFallback = true;
           }
         }
-        return migrated;
+        return restored.state;
       }
     } catch {
       // Invalid JSON is treated like a version mismatch and reseeded below.
@@ -266,6 +331,12 @@ function loadState(seedDate: string): LocalPreviewPlannerState {
 
   const fresh = createState(seedDate);
   memoryFallback = fresh;
+  try {
+    window.localStorage.setItem(LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify(fresh));
+    preferMemoryFallback = false;
+  } catch {
+    preferMemoryFallback = true;
+  }
   return fresh;
 }
 
@@ -274,26 +345,208 @@ function saveState(state: LocalPreviewPlannerState): void {
   memoryFallback = next;
 
   if (typeof window === "undefined") return;
+  let persistenceFailed = false;
   try {
     window.localStorage.setItem(LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify(next));
     preferMemoryFallback = false;
   } catch {
     // Keep the in-memory fallback when storage is unavailable or full.
     preferMemoryFallback = true;
+    persistenceFailed = true;
   }
   window.dispatchEvent(new Event(LOCAL_PREVIEW_CHANGE_EVENT));
+  if (persistenceFailed) {
+    throw new Error(
+      "Браузер не разрешил сохранить изменения. Проверь свободное место и доступ к хранилищу.",
+    );
+  }
+}
+
+function updateState(
+  seedDate: string,
+  updater: (state: LocalPreviewPlannerState) => LocalPreviewPlannerState,
+): LocalPreviewPlannerState {
+  const next = updater(loadState(seedDate));
+  saveState(next);
+  return next;
 }
 
 function updateSource(
   seedDate: string,
   updater: (source: OccurrenceSource) => OccurrenceSource,
 ): void {
-  const current = loadState(seedDate);
-  saveState({ ...current, source: updater(current.source) });
+  updateState(seedDate, (current) => ({ ...current, source: updater(current.source) }));
+}
+
+function localId(kind: string): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `local-${kind}-${uuid}`;
+  return `local-${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function readLocalPreviewSource(seedDate: string): OccurrenceSource {
   return loadState(seedDate).source;
+}
+
+export function readLocalPreviewGoals(seedDate: string): Goal[] {
+  return loadState(seedDate).goals;
+}
+
+export function readLocalPreviewReflections(seedDate: string): Reflection[] {
+  return loadState(seedDate).reflections;
+}
+
+export function readLocalPreviewAttachments(seedDate: string, actionId?: string): Attachment[] {
+  const attachments = loadState(seedDate).attachments;
+  return actionId
+    ? attachments.filter((attachment) => attachment.action_id === actionId)
+    : attachments;
+}
+
+export async function createLocalPreviewGoal(
+  seedDate: string,
+  draft: LocalPreviewGoalDraft,
+): Promise<Goal> {
+  const goal: Goal = {
+    id: localId("goal"),
+    life_area_id: draft.lifeAreaId,
+    result_text: draft.resultText.trim(),
+    status: "active",
+    created_at: new Date().toISOString(),
+    completed_at: null,
+    archived_at: null,
+  };
+  updateState(seedDate, (state) => ({ ...state, goals: [goal, ...state.goals] }));
+  return goal;
+}
+
+export async function createLocalPreviewAction(
+  seedDate: string,
+  draft: LocalPreviewActionDraft,
+): Promise<{ action: Action; goal?: Goal }> {
+  const createdAt = new Date().toISOString();
+  const newGoal =
+    !draft.goalId && draft.newGoal?.resultText.trim()
+      ? {
+          id: localId("goal"),
+          life_area_id: draft.newGoal.lifeAreaId,
+          result_text: draft.newGoal.resultText.trim(),
+          status: "active" as const,
+          created_at: createdAt,
+          completed_at: null,
+          archived_at: null,
+        }
+      : undefined;
+  const action: Action = {
+    id: localId("action"),
+    goal_id: draft.goalId ?? newGoal?.id ?? null,
+    name: draft.name.trim(),
+    type: draft.type,
+    description: draft.description,
+    duration_seconds: draft.durationSeconds,
+    why_important: draft.whyImportant,
+    helps_with: draft.helpsWith,
+    start_date: draft.startDate,
+    archived_at: null,
+    created_at: createdAt,
+  };
+  const schedules: Schedule[] = draft.schedules.map((schedule) => ({
+    id: localId("schedule"),
+    action_id: action.id,
+    ...schedule,
+    weekdays: [...schedule.weekdays],
+    status: "planned",
+  }));
+  const ritualItems: RitualItem[] = draft.ritualItems
+    .filter((item) => item.name.trim())
+    .map((item, index) => ({
+      id: localId("ritual-item"),
+      ritual_action_id: action.id,
+      name: item.name.trim(),
+      description: item.description,
+      duration_seconds: item.durationSeconds ?? null,
+      sort_order: index,
+    }));
+  const attachments: Attachment[] = draft.attachments
+    .filter((attachment) => attachment.url.trim())
+    .map((attachment) => ({
+      id: localId("attachment"),
+      action_id: action.id,
+      type: attachment.type,
+      url: attachment.url.trim(),
+      title: attachment.title?.trim() || null,
+    }));
+  const actionLifeAreas = draft.lifeAreaIds.slice(0, 3).map((lifeAreaId) => ({
+    action_id: action.id,
+    life_area_id: lifeAreaId,
+  }));
+
+  updateState(seedDate, (state) => ({
+    ...state,
+    goals: newGoal ? [newGoal, ...state.goals] : state.goals,
+    attachments: [...state.attachments, ...attachments],
+    source: {
+      ...state.source,
+      actions: [action, ...state.source.actions],
+      schedules: [...state.source.schedules, ...schedules],
+      ritualItems: [...state.source.ritualItems, ...ritualItems],
+      actionLifeAreas: [...state.source.actionLifeAreas, ...actionLifeAreas],
+    },
+  }));
+
+  return newGoal ? { action, goal: newGoal } : { action };
+}
+
+export async function setLocalPreviewGoalStatus(
+  seedDate: string,
+  goalId: string,
+  status: Goal["status"],
+): Promise<void> {
+  const now = new Date().toISOString();
+  updateState(seedDate, (state) => ({
+    ...state,
+    goals: state.goals.map((goal) =>
+      goal.id === goalId
+        ? {
+            ...goal,
+            status,
+            completed_at: status === "completed" ? now : null,
+            archived_at: status === "active" ? null : now,
+          }
+        : goal,
+    ),
+  }));
+}
+
+export async function saveLocalPreviewReflection(
+  seedDate: string,
+  input: { month: string; answers: LocalPreviewReflectionAnswers },
+): Promise<Reflection> {
+  let saved: Reflection | null = null;
+  updateState(seedDate, (state) => {
+    const existing = state.reflections.find((reflection) => reflection.month === input.month);
+    const answer = (field: keyof LocalPreviewReflectionAnswers): string | null =>
+      Object.prototype.hasOwnProperty.call(input.answers, field)
+        ? (input.answers[field] ?? null)
+        : (existing?.[field] ?? null);
+    saved = {
+      id: existing?.id ?? localId("reflection"),
+      month: input.month,
+      real_result: answer("real_result"),
+      effective_actions: answer("effective_actions"),
+      obstacles: answer("obstacles"),
+      system_change: answer("system_change"),
+      next_experiment: answer("next_experiment"),
+    };
+    return {
+      ...state,
+      reflections: [
+        saved,
+        ...state.reflections.filter((reflection) => reflection.month !== input.month),
+      ].sort((left, right) => right.month.localeCompare(left.month)),
+    };
+  });
+  return saved!;
 }
 
 export async function updateLocalPreviewAction(

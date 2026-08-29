@@ -36,6 +36,7 @@ function TodayScreen() {
           <DayPlan
             occurrences={occurrences}
             emptyText="На сегодня пока ничего не запланировано. Нажми ＋, чтобы добавить действие."
+            maxTitleLines={2}
           />
         </>
       )}

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { saveReflection } from "@/data/reflections";
 import { REFLECTION_QUESTIONS, type ReflectionField } from "@/domain/constants";
 import { factsForRange } from "@/domain/occurrences";
-import { addMonths, formatMonthTitle, monthStartKey, toDateKey } from "@/domain/schedule";
+import { addMonths, formatMonthTitle, monthStartKey, todayKey, toDateKey } from "@/domain/schedule";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlannerMutation, usePlannerSource, useReflections } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/surface";
 import { NavArrowLeft as ChevronLeft, NavArrowRight as ChevronRight } from "iconoir-react";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import { saveLocalPreviewReflection } from "@/lib/local-preview-store";
 
 export const Route = createFileRoute("/_authenticated/reflection")({
   head: () => ({
@@ -40,7 +41,10 @@ function ReflectionScreen() {
   const month = monthStartKey(monthDate);
   const saved = reflections.find((r) => r.month === month);
 
-  const [answers, setAnswers] = useState<Partial<Record<ReflectionField, string>>>({});
+  const [answersByMonth, setAnswersByMonth] = useState<
+    Record<string, Partial<Record<ReflectionField, string>>>
+  >({});
+  const answers = answersByMonth[month] ?? {};
 
   const facts = useMemo(() => {
     const from = monthStartKey(monthDate);
@@ -49,15 +53,14 @@ function ReflectionScreen() {
   }, [source, monthDate]);
 
   const save = usePlannerMutation(() => {
-    if (localPreview) return Promise.resolve();
-    return saveReflection({
-      userId: userId!,
-      month,
-      answers: REFLECTION_QUESTIONS.reduce(
-        (acc, q) => ({ ...acc, [q.field]: answers[q.field] ?? saved?.[q.field] ?? null }),
-        {},
-      ),
-    });
+    const nextAnswers = REFLECTION_QUESTIONS.reduce(
+      (acc, q) => ({ ...acc, [q.field]: answers[q.field] ?? saved?.[q.field] ?? null }),
+      {},
+    );
+    if (localPreview) {
+      return saveLocalPreviewReflection(todayKey(), { month, answers: nextAnswers });
+    }
+    return saveReflection({ userId: userId!, month, answers: nextAnswers });
   });
 
   return (
@@ -120,7 +123,12 @@ function ReflectionScreen() {
             <Field key={q.field} label={q.question}>
               <TextField
                 value={answers[q.field] ?? saved?.[q.field] ?? ""}
-                onChange={(value) => setAnswers((prev) => ({ ...prev, [q.field]: value }))}
+                onChange={(value) =>
+                  setAnswersByMonth((previous) => ({
+                    ...previous,
+                    [month]: { ...previous[month], [q.field]: value },
+                  }))
+                }
                 placeholder="Твой ответ"
                 multiline
               />
@@ -133,16 +141,10 @@ function ReflectionScreen() {
                 onError: () => toast.error("Не удалось сохранить"),
               })
             }
-            disabled={localPreview}
             loading={save.isPending}
           >
             Сохранить рефлексию
           </PrimaryButton>
-          {localPreview ? (
-            <p className="text-center text-sm text-muted-foreground">
-              В демо-режиме ответы не сохраняются.
-            </p>
-          ) : null}
         </section>
       </div>
     </AppScreen>

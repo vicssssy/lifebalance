@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-You can also double-click `Preview My Daily Flow.command` on macOS to launch the local mobile preview.
+You can also double-click `Preview My Daily Flow.command` on macOS to launch the app locally.
 
 ## Built with
 
