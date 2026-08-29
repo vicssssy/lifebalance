@@ -1,25 +1,17 @@
-# Welcome to your Lovable project
+# lifebalance
 
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+A simple, thoughtful app that helps you turn the changes you want in your life into meaningful actions. Set goals, choose what will help you achieve them, plan your actions, stay focused on what matters today, and reflect regularly to build a system that truly works for you.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Install Node.js and npm, then run:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+You can also double-click `Preview My Daily Flow.command` on macOS to launch the local mobile preview.
 
 ## Built with
 
@@ -27,3 +19,4 @@ npm run dev
 - TypeScript
 - React
 - Tailwind CSS
+- Supabase
