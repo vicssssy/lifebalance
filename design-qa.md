@@ -156,4 +156,17 @@
 - P1 blockers: none.
 - P2 visual or functional defects: none after the Today clamp and permanent-app persistence pass.
 
+## Duration picker sheet redesign QA — 30 August 2026
+
+- Source screenshot: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-c902e349-e8d9-4af8-9b38-52ee0e199f4b.png` (832 × 568 px), showing the rejected oversized duration sheet.
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/duration-picker-redesign/duration-390x844.png` at a requested 390 × 844 CSS viewport.
+- Normalized before/after comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/duration-picker-redesign/source-vs-redesign.png`.
+- Additional responsive evidence: `duration-320x568.png` and `duration-430x932.png` in the same QA folder.
+- The sheet now uses a compact hierarchy: drag indicator, explicit `Продолжительность` title, live selected-duration summary, contained wheel surface, clearer selected row, and tighter footer actions.
+- Existing Russian terms, 40 px wheel item geometry, snap/settling calculation, open-state reset, null-duration behavior, backdrop cancellation, and submit callback are unchanged.
+- `Отменить` closed the sheet without applying a change. `Добавить` preserved the selected 15-minute duration and returned to the same action route.
+- At 320, 390, and 430 px, the sheet remained inside the phone canvas, controls stayed visible, and document `scrollWidth` did not exceed `clientWidth`.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed
