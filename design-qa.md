@@ -256,4 +256,17 @@
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 
+## Bottom navigation reference QA — 30 August 2026
+
+- Visual reference: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-7d534cf6-3681-4752-bc81-01204c584caf.png` (1206 × 345 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/bottom-nav-reference/final-390.png`.
+- Normalized reference comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/bottom-nav-reference/reference-vs-implementation.png`.
+- The navigation is now an opaque white dock flush with the bottom of the phone canvas, with rounded top corners, a restrained upward shadow, four symmetric route items, and the existing raised purple `＋` action.
+- Existing Russian labels, route targets, tab order, active-route semantics, `/new` behavior, safe-area padding, and application data logic remain unchanged. The navigation now also exposes the landmark label `Основная навигация`.
+- Inactive label contrast was raised above the WCAG AA threshold while preserving the established purple active state and icon system.
+- At 320, 390, and 430 px, the dock ended exactly at the viewport bottom, stayed within the phone shell, produced no horizontal overflow, and retained at least 44 px for every target. The center action remained 64 × 64 px.
+- Browser clicks verified `Сегодня`, `Календарь`, `Мои цели`, `Рефлексия`, and `Добавить`; all five opened their original destinations. The `/new` and Action Detail sticky action panels remained fully above the dock with no overlap.
+- Fresh browser console errors: 0. TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed
