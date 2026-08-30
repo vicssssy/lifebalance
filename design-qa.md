@@ -182,4 +182,16 @@
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining in the reported picker: none.
 
+## Action-card title hierarchy QA — 30 August 2026
+
+- Source screenshot: `/Users/arthurberlin/Downloads/Screenshot 2026-08-30 at 10.15.46.png` (1260 × 2736 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-title-font/today-430x932.png`.
+- Normalized visual comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-title-font/source-vs-larger-title.png`.
+- The action `Название` is now 16 px with a 19.52 px line height, making it the largest text inside every Today/Calendar occurrence card. The action type and metadata remain secondary at 11 px.
+- The existing Today-only two-line clamp remains active. Long Russian titles measured exactly two line heights at 320 and 430 px, retained their complete accessible text, and continued to end with an overflow ellipsis.
+- Card route links, completion controls, drag handles, time, duration, status, action-format terminology, and saved title source remain unchanged.
+- At 320, 390, and 430 px there was no horizontal overflow; completion controls remained 44 × 44 px and did not overlap the larger title.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed

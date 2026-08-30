@@ -100,7 +100,7 @@ export function OccurrenceCard({
           </p>
           <p
             className={cn(
-              "mt-0.5 text-[13px] font-semibold leading-[1.18] tracking-[-0.012em]",
+              "mt-1 text-[16px] font-semibold leading-[1.22] tracking-[-0.018em]",
               maxTitleLines === 2 && "line-clamp-2",
               muted ? "text-foreground/65" : "text-foreground",
             )}
