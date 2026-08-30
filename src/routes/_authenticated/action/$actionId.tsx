@@ -450,6 +450,7 @@ function ActionDetail() {
             </div>
 
             <EditableSection
+              key={`name-${actionIsActive}`}
               title="Название"
               value={action.name}
               placeholder="Название действия"
@@ -516,6 +517,7 @@ function ActionDetail() {
           ) : null}
 
           <EditableSection
+            key={`description-${actionIsActive}`}
             title="Что делать"
             value={action.description ?? ""}
             placeholder="Опиши, что именно нужно сделать"
@@ -562,6 +564,7 @@ function ActionDetail() {
           <Divider />
 
           <EditableSection
+            key={`why-${actionIsActive}`}
             title="Почему это важно"
             value={action.why_important ?? ""}
             placeholder="Например, так я забочусь о себе"
@@ -574,6 +577,7 @@ function ActionDetail() {
           <Divider />
 
           <EditableSection
+            key={`helps-${actionIsActive}`}
             title="Как это ведёт к результату"
             value={action.helps_with ?? ""}
             placeholder="Опиши связь между действием и желаемым результатом"
