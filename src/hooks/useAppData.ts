@@ -6,7 +6,7 @@ import { fetchSchedules } from "@/data/schedules";
 import { fetchCompletions, fetchRitualItemCompletions } from "@/data/completions";
 import { fetchGoals } from "@/data/goals";
 import { fetchReflections } from "@/data/reflections";
-import type { OccurrenceSource } from "@/domain/occurrences";
+import type { OccurrenceSource, PlannerRecords } from "@/domain/occurrences";
 import type { Goal, Reflection } from "@/domain/types";
 import { todayKey } from "@/domain/schedule";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
@@ -89,7 +89,8 @@ export function usePlannerSource() {
   const localPreview = isLocalPreviewAuthBypassEnabled();
   const previewSeedDate = todayKey();
   useLocalPreviewPlannerSync(localPreview);
-  const preview = useQuery<OccurrenceSource>({
+  const goals = useGoals();
+  const preview = useQuery<PlannerRecords>({
     queryKey: [...queryKeys.localPreviewPlanner, previewSeedDate],
     queryFn: () => Promise.resolve(readLocalPreviewSource(previewSeedDate)),
     enabled: localPreview,
@@ -128,7 +129,7 @@ export function usePlannerSource() {
     enabled: !localPreview,
   });
 
-  const source: OccurrenceSource = localPreview
+  const records: PlannerRecords = localPreview
     ? (preview.data ?? createLocalPreviewSource(previewSeedDate))
     : {
         actions: actions.data ?? [],
@@ -138,6 +139,10 @@ export function usePlannerSource() {
         ritualItemCompletions: ritualItemCompletions.data ?? [],
         actionLifeAreas: actionLifeAreas.data ?? [],
       };
+  const source: OccurrenceSource = {
+    ...records,
+    goals: goals.data ?? (localPreview ? readLocalPreviewGoals(previewSeedDate) : []),
+  };
 
   const isLoading = localPreview
     ? false
@@ -146,7 +151,8 @@ export function usePlannerSource() {
       completions.isLoading ||
       ritualItems.isLoading ||
       ritualItemCompletions.isLoading ||
-      actionLifeAreas.isLoading;
+      actionLifeAreas.isLoading ||
+      goals.isLoading;
 
   return { source, isLoading };
 }

@@ -1,4 +1,4 @@
-import type { OccurrenceSource } from "@/domain/occurrences";
+import type { PlannerRecords } from "@/domain/occurrences";
 import type {
   Action,
   Attachment,
@@ -8,6 +8,7 @@ import type {
   RitualItem,
   Schedule,
 } from "@/domain/types";
+import { toDateKey } from "@/domain/schedule";
 import { createLocalPreviewGoals, createLocalPreviewSource } from "@/lib/local-preview-demo";
 
 const SCHEMA_VERSION = 1;
@@ -21,7 +22,7 @@ interface LocalPreviewPlannerState {
   fixtureVersion: typeof FIXTURE_VERSION;
   seededFor: string;
   updatedAt: string;
-  source: OccurrenceSource;
+  source: PlannerRecords;
   goals: Goal[];
   reflections: Reflection[];
   attachments: Attachment[];
@@ -105,6 +106,22 @@ function isNullableString(value: unknown): value is string | null {
 
 function isNullableNumber(value: unknown): value is number | null {
   return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isDateKey(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function dateKeyFrom(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+  return match?.[1] ?? null;
+}
+
+function localDateKeyFromTimestamp(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : toDateKey(date);
 }
 
 function isAction(value: unknown): boolean {
@@ -195,8 +212,25 @@ function isGoal(value: unknown): boolean {
     ["active", "completed", "cancelled"].includes(String(value["status"])) &&
     typeof value["created_at"] === "string" &&
     isNullableString(value["completed_at"]) &&
-    isNullableString(value["archived_at"])
+    isNullableString(value["archived_at"]) &&
+    (value["closed_on"] === undefined ||
+      value["closed_on"] === null ||
+      isDateKey(value["closed_on"]))
   );
+}
+
+function normalizeGoal(value: Record<string, unknown>, fallbackDate: string): Goal {
+  const status = value["status"] as Goal["status"];
+  const closedOn =
+    status === "active"
+      ? null
+      : isDateKey(value["closed_on"])
+        ? value["closed_on"]
+        : (localDateKeyFromTimestamp(value["completed_at"]) ??
+          localDateKeyFromTimestamp(value["archived_at"]) ??
+          fallbackDate);
+
+  return { ...value, closed_on: closedOn } as unknown as Goal;
 }
 
 function isReflection(value: unknown): boolean {
@@ -223,9 +257,9 @@ function isAttachment(value: unknown): boolean {
   );
 }
 
-function isOccurrenceSource(value: unknown): value is OccurrenceSource {
+function isPlannerRecords(value: unknown): value is PlannerRecords {
   if (!value || typeof value !== "object") return false;
-  const source = value as Partial<OccurrenceSource>;
+  const source = value as Partial<PlannerRecords>;
   return (
     Array.isArray(source.actions) &&
     source.actions.every(isAction) &&
@@ -251,7 +285,7 @@ function upgradeStoredState(
     value["fixtureVersion"] !== FIXTURE_VERSION ||
     typeof value["seededFor"] !== "string" ||
     typeof value["updatedAt"] !== "string" ||
-    !isOccurrenceSource(value["source"])
+    !isPlannerRecords(value["source"])
   ) {
     return null;
   }
@@ -275,8 +309,18 @@ function upgradeStoredState(
     return null;
   }
 
+  const fallbackClosedOn = dateKeyFrom(value["seededFor"]) ?? new Date().toISOString().slice(0, 10);
+  const normalizedGoals = goalsValue
+    ? (goalsValue as Record<string, unknown>[]).map((goal) => normalizeGoal(goal, fallbackClosedOn))
+    : createLocalPreviewGoals(value["seededFor"]);
+  const goalsUpgraded = goalsValue
+    ? (goalsValue as Record<string, unknown>[]).some(
+        (goal, index) => goal["closed_on"] !== normalizedGoals[index]?.closed_on,
+      )
+    : true;
+
   const upgraded =
-    goalsValue === undefined || reflectionsValue === undefined || attachmentsValue === undefined;
+    goalsUpgraded || reflectionsValue === undefined || attachmentsValue === undefined;
   return {
     state: {
       schemaVersion: SCHEMA_VERSION,
@@ -284,7 +328,7 @@ function upgradeStoredState(
       seededFor: value["seededFor"],
       updatedAt: value["updatedAt"],
       source: value["source"],
-      goals: (goalsValue as Goal[] | undefined) ?? createLocalPreviewGoals(value["seededFor"]),
+      goals: normalizedGoals,
       reflections: (reflectionsValue as Reflection[] | undefined) ?? [],
       attachments: (attachmentsValue as Attachment[] | undefined) ?? [],
     },
@@ -371,10 +415,7 @@ function updateState(
   return next;
 }
 
-function updateSource(
-  seedDate: string,
-  updater: (source: OccurrenceSource) => OccurrenceSource,
-): void {
+function updateSource(seedDate: string, updater: (source: PlannerRecords) => PlannerRecords): void {
   updateState(seedDate, (current) => ({ ...current, source: updater(current.source) }));
 }
 
@@ -384,7 +425,7 @@ function localId(kind: string): string {
   return `local-${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function readLocalPreviewSource(seedDate: string): OccurrenceSource {
+export function readLocalPreviewSource(seedDate: string): PlannerRecords {
   return loadState(seedDate).source;
 }
 
@@ -415,6 +456,7 @@ export async function createLocalPreviewGoal(
     created_at: new Date().toISOString(),
     completed_at: null,
     archived_at: null,
+    closed_on: null,
   };
   updateState(seedDate, (state) => ({ ...state, goals: [goal, ...state.goals] }));
   return goal;
@@ -435,6 +477,7 @@ export async function createLocalPreviewAction(
           created_at: createdAt,
           completed_at: null,
           archived_at: null,
+          closed_on: null,
         }
       : undefined;
   const action: Action = {
@@ -501,8 +544,13 @@ export async function setLocalPreviewGoalStatus(
   seedDate: string,
   goalId: string,
   status: Goal["status"],
+  closedOn: string = seedDate,
 ): Promise<void> {
   const now = new Date().toISOString();
+  const cutoffDate = status === "active" ? null : isDateKey(closedOn) ? closedOn : null;
+  if (status !== "active" && !cutoffDate) {
+    throw new Error("Некорректная дата завершения цели.");
+  }
   updateState(seedDate, (state) => ({
     ...state,
     goals: state.goals.map((goal) =>
@@ -512,6 +560,7 @@ export async function setLocalPreviewGoalStatus(
             status,
             completed_at: status === "completed" ? now : null,
             archived_at: status === "active" ? null : now,
+            closed_on: cutoffDate,
           }
         : goal,
     ),

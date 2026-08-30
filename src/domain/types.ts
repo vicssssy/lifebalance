@@ -18,6 +18,8 @@ export interface Goal {
   created_at: string;
   completed_at: string | null;
   archived_at: string | null;
+  /** Последний день, когда связанные действия остаются частью исторического плана. */
+  closed_on: string | null;
 }
 
 export interface Action {
@@ -93,6 +95,8 @@ export interface Reflection {
 export interface Occurrence {
   key: string;
   action: Action;
+  /** Можно ли менять действие и его текущее планирование. */
+  actionActive: boolean;
   schedule: Schedule;
   date: string;
   startTime: string | null;

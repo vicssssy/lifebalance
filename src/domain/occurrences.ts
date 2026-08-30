@@ -3,19 +3,24 @@ import { dayPartFor, fromDateKey, isoWeekday } from "./schedule";
 import type {
   Action,
   Completion,
+  Goal,
   Occurrence,
   RitualItem,
   RitualItemCompletion,
   Schedule,
 } from "./types";
 
-export interface OccurrenceSource {
+export interface PlannerRecords {
   actions: Action[];
   schedules: Schedule[];
   completions: Completion[];
   ritualItems: RitualItem[];
   ritualItemCompletions: RitualItemCompletion[];
   actionLifeAreas: { action_id: string; life_area_id: string }[];
+}
+
+export interface OccurrenceSource extends PlannerRecords {
+  goals: Goal[];
 }
 
 function scheduleHitsDate(schedule: Schedule, dateKey: string): boolean {
@@ -25,9 +30,21 @@ function scheduleHitsDate(schedule: Schedule, dateKey: string): boolean {
   return schedule.weekdays.includes(weekday);
 }
 
-/** Собирает все действия, запланированные на конкретный день. */
-export function occurrencesForDate(source: OccurrenceSource, dateKey: string): Occurrence[] {
+export type OccurrenceView = "active-plan" | "history";
+
+/**
+ * Собирает действия на конкретный день.
+ *
+ * active-plan — только действия активных Goals (Today и текущий план).
+ * history — прошлый план с сохранёнными фактами закрытого дня (Calendar и Reflection).
+ */
+export function occurrencesForDate(
+  source: OccurrenceSource,
+  dateKey: string,
+  view: OccurrenceView,
+): Occurrence[] {
   const actionById = new Map(source.actions.map((a) => [a.id, a]));
+  const goalById = new Map(source.goals.map((goal) => [goal.id, goal]));
   const areasByAction = new Map<string, string[]>();
   for (const link of source.actionLifeAreas) {
     const list = areasByAction.get(link.action_id) ?? [];
@@ -44,19 +61,32 @@ export function occurrencesForDate(source: OccurrenceSource, dateKey: string): O
     // Действие не появляется раньше своей даты начала.
     if (action.start_date && dateKey < action.start_date) continue;
 
-    const completed = source.completions.some(
-      (c) =>
-        c.schedule_id === schedule.id &&
-        c.occurrence_date === dateKey &&
-        c.status === "completed",
+    const completion = source.completions.find(
+      (item) => item.schedule_id === schedule.id && item.occurrence_date === dateKey,
     );
 
-    const skipped = source.completions.some(
-      (c) =>
-        c.schedule_id === schedule.id &&
-        c.occurrence_date === dateKey &&
-        c.status === "skipped",
-    );
+    // Закрытая Goal сразу выключает действие из активного плана. Исторический режим
+    // сохраняет прошлые появления, а в день закрытия — только уже зафиксированный факт.
+    const goal = action.goal_id ? goalById.get(action.goal_id) : null;
+    // Отсутствующая связанная Goal не должна случайно реактивировать Action.
+    const actionActive = !action.goal_id || goal?.status === "active";
+    if (!actionActive) {
+      const closedOn =
+        goal?.closed_on ?? goal?.completed_at?.slice(0, 10) ?? goal?.archived_at?.slice(0, 10);
+      const terminalHistory =
+        completion?.status === "completed" || completion?.status === "skipped";
+      if (
+        view === "active-plan" ||
+        !closedOn ||
+        dateKey > closedOn ||
+        (dateKey === closedOn && !terminalHistory)
+      ) {
+        continue;
+      }
+    }
+
+    const completed = completion?.status === "completed";
+    const skipped = completion?.status === "skipped";
 
     let ritualProgress: Occurrence["ritualProgress"] = null;
     if (action.type === "ritual") {
@@ -75,6 +105,7 @@ export function occurrencesForDate(source: OccurrenceSource, dateKey: string): O
     result.push({
       key: `${schedule.id}:${dateKey}`,
       action,
+      actionActive,
       schedule,
       date: dateKey,
       startTime: schedule.start_time,
@@ -107,8 +138,10 @@ export function groupByDayPart(occurrences: Occurrence[]): DaySection[] {
   return DAY_PARTS.map(({ key, title }) => ({
     key,
     title,
-    items: (buckets.get(key) ?? []).sort((a, b) =>
-      (a.startTime ?? "").localeCompare(b.startTime ?? "") || a.action.name.localeCompare(b.action.name),
+    items: (buckets.get(key) ?? []).sort(
+      (a, b) =>
+        (a.startTime ?? "").localeCompare(b.startTime ?? "") ||
+        a.action.name.localeCompare(b.action.name),
     ),
   })).filter((section) => section.items.length > 0);
 }
@@ -125,7 +158,7 @@ export function factsForRange(
 
   for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
     const key = `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, "0")}-${`${d.getDate()}`.padStart(2, "0")}`;
-    for (const occ of occurrencesForDate(source, key)) {
+    for (const occ of occurrencesForDate(source, key, "history")) {
       const entry = counters.get(occ.action.id) ?? { planned: 0, completed: 0 };
       entry.planned += 1;
       if (occ.completed) entry.completed += 1;

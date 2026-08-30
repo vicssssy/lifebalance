@@ -116,7 +116,7 @@ function TodayScreen() {
   const [today] = useState(todayKey);
   const [date, setDate] = useState(today);
   const currentDate = fromDateKey(date);
-  const occurrences = occurrencesForDate(source, date);
+  const occurrences = occurrencesForDate(source, date, "active-plan");
 
   return (
     <AppScreen

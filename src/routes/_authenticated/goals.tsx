@@ -10,6 +10,7 @@ import {
   Sparks,
   TaskList,
   Trophy,
+  Xmark,
 } from "iconoir-react";
 import { toast } from "sonner";
 import { setGoalStatus } from "@/data/goals";
@@ -24,6 +25,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { AppIcon } from "@/components/ui/icon";
 import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
 import { setLocalPreviewGoalStatus } from "@/lib/local-preview-store";
+import type { GoalStatus } from "@/domain/types";
 
 const ACTION_ICON: Record<ActionType, AppIcon> = {
   ritual: Sparks,
@@ -60,12 +62,15 @@ function GoalsScreen() {
   const [showArchive, setShowArchive] = useState(false);
   const localPreview = isLocalPreviewAuthBypassEnabled();
 
-  const complete = usePlannerMutation(async (goalId: string) => {
-    if (localPreview) {
-      return setLocalPreviewGoalStatus(todayKey(), goalId, "completed");
-    }
-    await setGoalStatus(goalId, "completed");
-  });
+  const closeGoal = usePlannerMutation(
+    async ({ goalId, status }: { goalId: string; status: Exclude<GoalStatus, "active"> }) => {
+      const closedOn = todayKey();
+      if (localPreview) {
+        return setLocalPreviewGoalStatus(closedOn, goalId, status, closedOn);
+      }
+      await setGoalStatus(goalId, status, closedOn);
+    },
+  );
 
   const displayGoals = goals;
 
@@ -84,10 +89,10 @@ function GoalsScreen() {
       subtitle={
         selectedArea
           ? showArchive
-            ? "Завершённые результаты"
+            ? "Архив результатов"
             : "Активные результаты"
           : showArchive
-            ? "Завершённые результаты"
+            ? "Архив результатов"
             : "Активные результаты по сферам жизни"
       }
       right={
@@ -132,7 +137,7 @@ function GoalsScreen() {
           title={showArchive ? "Архив пуст" : "Ещё нет результатов"}
           description={
             showArchive
-              ? "Завершённые результаты появятся здесь."
+              ? "Завершённые и отменённые результаты появятся здесь."
               : "Нажми ＋ и начни со сферы жизни."
           }
         />
@@ -175,7 +180,11 @@ function GoalsScreen() {
                           </span>
                           <div className="min-w-0 pb-4 pt-0.5">
                             <p className="text-[12px] font-medium leading-none text-muted-foreground">
-                              Результат
+                              {goal.status === "completed"
+                                ? "✓ Результат достигнут"
+                                : goal.status === "cancelled"
+                                  ? "× Отменено"
+                                  : "Результат"}
                             </p>
                             <h3 className="mt-2 text-[18px] font-semibold leading-[1.34] tracking-[-0.02em] text-foreground">
                               {goal.result_text}
@@ -250,19 +259,39 @@ function GoalsScreen() {
                             >
                               <Check className="size-[18px]" strokeWidth={2.25} />
                             </span>
-                            <div className="border-t border-white/85 pt-2.5">
+                            <div className="space-y-1 border-t border-white/85 pt-2.5">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="w-full justify-start rounded-2xl px-2 text-primary hover:bg-white/60"
-                                loading={complete.isPending}
+                                loading={closeGoal.isPending}
                                 onClick={() =>
-                                  complete.mutate(goal.id, {
-                                    onSuccess: () => toast.success("Результат достигнут"),
-                                  })
+                                  closeGoal.mutate(
+                                    { goalId: goal.id, status: "completed" },
+                                    {
+                                      onSuccess: () => toast.success("Результат достигнут"),
+                                    },
+                                  )
                                 }
                               >
                                 Результат достигнут
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start rounded-2xl px-2 text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                                disabled={closeGoal.isPending}
+                                onClick={() =>
+                                  closeGoal.mutate(
+                                    { goalId: goal.id, status: "cancelled" },
+                                    {
+                                      onSuccess: () => toast.success("Результат отменён"),
+                                    },
+                                  )
+                                }
+                              >
+                                <Xmark strokeWidth={1.9} aria-hidden />
+                                Отменено
                               </Button>
                             </div>
                           </div>

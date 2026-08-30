@@ -23,7 +23,7 @@ function CalendarScreen() {
   const [selected, setSelected] = useState<string[]>([todayKey()]);
   const date = selected[0] ?? todayKey();
   const { source, isLoading } = usePlannerSource();
-  const occurrences = occurrencesForDate(source, date);
+  const occurrences = occurrencesForDate(source, date, "history");
 
   return (
     <AppScreen title="Календарь" subtitle={formatDayLong(fromDateKey(date))}>

@@ -43,7 +43,7 @@ import {
 } from "@/domain/schedule";
 import type { RitualItem } from "@/domain/types";
 import { useAuth } from "@/hooks/useAuth";
-import { useGoals, useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
+import { useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { DayPicker } from "@/components/planning";
 import { DurationSheet, DurationWheels, PickerSheet, TimeSheet } from "@/components/pickers";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -231,7 +231,6 @@ function ActionDetail() {
   const { userId } = useAuth();
   const { source, isLoading } = usePlannerSource();
   const { data: areas = [] } = useLifeAreas();
-  const { data: goals = [] } = useGoals();
   const localPreview = isLocalPreviewAuthBypassEnabled();
   const previewSeedDate = todayKey();
 
@@ -269,7 +268,8 @@ function ActionDetail() {
     .map((l) => areas.find((a) => a.id === l.life_area_id))
     .filter((area): area is NonNullable<typeof area> => Boolean(area));
 
-  const goal = goals.find((g) => g.id === action?.goal_id) ?? null;
+  const goal = source.goals.find((g) => g.id === action?.goal_id) ?? null;
+  const actionIsActive = !action?.goal_id || goal?.status === "active";
 
   const completed = source.completions.some(
     (c) => c.schedule_id === schedule?.id && c.occurrence_date === date && c.status === "completed",
@@ -456,21 +456,31 @@ function ActionDetail() {
               emptyText="Добавь название."
               onSave={savePatch("name")}
               saving={patch.isPending}
+              editable={actionIsActive}
               multiline={false}
               valueClassName="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]"
             />
 
             <div className="flex flex-wrap items-center gap-2">
               {schedule ? (
-                <EditableChip icon={Clock} onClick={() => setSheet("time")}>
+                <EditableChip
+                  icon={Clock}
+                  onClick={() => setSheet("time")}
+                  disabled={!actionIsActive}
+                >
                   {time ?? "Время"}
                 </EditableChip>
               ) : null}
-              <EditableChip icon={Hourglass} onClick={() => setSheet("duration")}>
+              <EditableChip
+                icon={Hourglass}
+                onClick={() => setSheet("duration")}
+                disabled={!actionIsActive}
+              >
                 {duration ?? "Длительность"}
               </EditableChip>
               <EditableChip
                 icon={Calendar}
+                disabled={!actionIsActive}
                 onClick={() => {
                   setStartDraft(action.start_date);
                   setSheet("start");
@@ -512,6 +522,7 @@ function ActionDetail() {
             emptyText="Добавь описание, чтобы не думать об этом в момент выполнения."
             onSave={savePatch("description")}
             saving={patch.isPending}
+            editable={actionIsActive}
           >
             {items.length ? (
               <div className="mt-3 overflow-hidden rounded-[26px] border border-white/80 bg-white/64 shadow-mid backdrop-blur-2xl">
@@ -530,8 +541,8 @@ function ActionDetail() {
                         key={item.id}
                         item={item}
                         done={itemDone(item.id)}
-                        disabled={!schedule}
-                        readOnly={false}
+                        disabled={!schedule || !actionIsActive}
+                        readOnly={!actionIsActive}
                         onToggle={() =>
                           toggleItem.mutate({ itemId: item.id, done: !itemDone(item.id) })
                         }
@@ -557,6 +568,7 @@ function ActionDetail() {
             emptyText="Добавь личный смысл — это помогает возвращаться к действию."
             onSave={savePatch("why_important")}
             saving={patch.isPending}
+            editable={actionIsActive}
           />
 
           <Divider />
@@ -568,6 +580,7 @@ function ActionDetail() {
             emptyText="Опиши, как это действие приближает тебя к результату."
             onSave={savePatch("helps_with")}
             saving={patch.isPending}
+            editable={actionIsActive}
           />
 
           {attachments.length ? (
@@ -598,7 +611,7 @@ function ActionDetail() {
             </>
           ) : null}
 
-          {schedule ? (
+          {schedule && actionIsActive ? (
             <StickyActions
               hint={items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined}
             >
@@ -658,7 +671,7 @@ function ActionDetail() {
 
       {/* Время начала */}
       <TimeSheet
-        open={sheet === "time"}
+        open={actionIsActive && sheet === "time"}
         value={schedule?.start_time ?? null}
         onCancel={() => setSheet(null)}
         onSubmit={(next) => {
@@ -669,7 +682,7 @@ function ActionDetail() {
 
       {/* Продолжительность */}
       <DurationSheet
-        open={sheet === "duration"}
+        open={actionIsActive && sheet === "duration"}
         seconds={durationSeconds}
         onCancel={() => setSheet(null)}
         onSubmit={(next) => {
@@ -681,7 +694,7 @@ function ActionDetail() {
 
       {/* Дата начала */}
       <PickerSheet
-        open={sheet === "start"}
+        open={actionIsActive && sheet === "start"}
         onCancel={() => setSheet(null)}
         onSubmit={() => {
           setSheet(null);
@@ -698,7 +711,7 @@ function ActionDetail() {
 
       {/* Перенос действия */}
       <PickerSheet
-        open={sheet === "move"}
+        open={actionIsActive && sheet === "move"}
         onCancel={() => setSheet(null)}
         submitLabel="Перенести"
         onSubmit={() => {
@@ -742,7 +755,7 @@ function ActionDetail() {
 
       {/* Пункт ритуала */}
       <PickerSheet
-        open={Boolean(editItem)}
+        open={actionIsActive && Boolean(editItem)}
         onCancel={() => setEditItem(null)}
         submitLabel="Сохранить"
         onSubmit={() => {

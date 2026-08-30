@@ -195,6 +195,7 @@ export type Database = {
       goals: {
         Row: {
           archived_at: string | null
+          closed_on: string | null
           completed_at: string | null
           created_at: string
           id: string
@@ -206,6 +207,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          closed_on?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -217,6 +219,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          closed_on?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string

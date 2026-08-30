@@ -1,4 +1,4 @@
-import type { OccurrenceSource } from "@/domain/occurrences";
+import type { PlannerRecords } from "@/domain/occurrences";
 import type { Action, Completion, Goal, RitualItem, Schedule } from "@/domain/types";
 
 const EVERY_DAY = [1, 2, 3, 4, 5, 6, 7];
@@ -17,6 +17,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       created_at: createdAt,
       completed_at: null,
       archived_at: null,
+      closed_on: null,
     },
     {
       id: "demo-goal-personal-growth",
@@ -27,6 +28,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       created_at: createdAt,
       completed_at: null,
       archived_at: null,
+      closed_on: null,
     },
     {
       id: "demo-goal-body-health",
@@ -37,6 +39,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       created_at: createdAt,
       completed_at: null,
       archived_at: null,
+      closed_on: null,
     },
     {
       id: "demo-goal-career",
@@ -47,6 +50,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       created_at: createdAt,
       completed_at: null,
       archived_at: null,
+      closed_on: null,
     },
     {
       id: "demo-goal-money",
@@ -57,6 +61,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       created_at: createdAt,
       completed_at: null,
       archived_at: null,
+      closed_on: null,
     },
   ];
 }
@@ -65,7 +70,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
  * Five substantial starter examples for the sign-in-free browser-local app.
  * The authenticated data path continues to use Supabase unchanged.
  */
-export function createLocalPreviewSource(date: string): OccurrenceSource {
+export function createLocalPreviewSource(date: string): PlannerRecords {
   const createdAt = `${date}T06:00:00.000Z`;
 
   const actions: Action[] = [

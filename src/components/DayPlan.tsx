@@ -57,19 +57,26 @@ function DraggableCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: occurrence.key,
+    disabled: !occurrence.actionActive,
   });
 
   return (
     <OccurrenceCard
       occurrence={occurrence}
-      onToggle={onToggle}
+      {...(occurrence.actionActive ? { onToggle } : {})}
       {...(maxTitleLines === 2 ? { maxTitleLines } : {})}
-      drag={{
-        ref: setNodeRef,
-        style: transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : {},
-        isDragging,
-        handleProps: { ...attributes, ...listeners },
-      }}
+      {...(occurrence.actionActive
+        ? {
+            drag: {
+              ref: setNodeRef,
+              style: transform
+                ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+                : {},
+              isDragging,
+              handleProps: { ...attributes, ...listeners },
+            },
+          }
+        : {})}
     />
   );
 }
@@ -170,6 +177,7 @@ export function DayPlan({
   }
 
   const handleToggle = (occurrence: Occurrence, next: boolean) => {
+    if (!occurrence.actionActive) return;
     if (localPreview) {
       toggle.mutate(
         { occurrence, next },
@@ -190,7 +198,7 @@ export function DayPlan({
     if (!overId.startsWith("part:")) return;
     const target = overId.slice(5) as DayPart;
     const occ = displayedOccurrences.find((o) => o.key === event.active.id);
-    if (!occ) return;
+    if (!occ?.actionActive) return;
     if (dayPartFor(occ.startTime) === target) return;
     if (localPreview) {
       const startTime = DAY_PART_TIME[target];
