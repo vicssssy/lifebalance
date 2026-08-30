@@ -16,20 +16,13 @@ import { markActionCompleted, unmarkActionCompleted } from "@/data/completions";
 import { updateSchedule } from "@/data/schedules";
 import { DAY_PARTS, type DayPart } from "@/domain/constants";
 import { groupByDayPart } from "@/domain/occurrences";
-import { dayPartFor, todayKey } from "@/domain/schedule";
+import { dayPartFor } from "@/domain/schedule";
 import type { Occurrence } from "@/domain/types";
-import { useAuth } from "@/hooks/useAuth";
 import { usePlannerMutation } from "@/hooks/useAppData";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/surface";
 import { cn } from "@/lib/utils";
 import { OccurrenceCard } from "./OccurrenceCard";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
-import {
-  removeLocalPreviewActionStatus,
-  setLocalPreviewActionStatus,
-  updateLocalPreviewSchedule,
-} from "@/lib/local-preview-store";
 
 /** Время по умолчанию для категории дня при переносе. */
 const DAY_PART_TIME: Record<DayPart, string | null> = {
@@ -115,10 +108,7 @@ export function DayPlan({
   emptyText: string;
   maxTitleLines?: 2;
 }) {
-  const { userId } = useAuth();
   const [dragging, setDragging] = useState(false);
-  const localPreview = isLocalPreviewAuthBypassEnabled();
-  const previewSeedDate = todayKey();
   const displayedOccurrences = occurrences;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -126,25 +116,8 @@ export function DayPlan({
   );
 
   const toggle = usePlannerMutation((input: { occurrence: Occurrence; next: boolean }) => {
-    if (localPreview) {
-      return input.next
-        ? setLocalPreviewActionStatus(
-            previewSeedDate,
-            {
-              actionId: input.occurrence.action.id,
-              scheduleId: input.occurrence.schedule.id,
-              date: input.occurrence.date,
-            },
-            "completed",
-          )
-        : removeLocalPreviewActionStatus(previewSeedDate, {
-            scheduleId: input.occurrence.schedule.id,
-            date: input.occurrence.date,
-          });
-    }
     return input.next
       ? markActionCompleted({
-          userId: userId!,
           actionId: input.occurrence.action.id,
           scheduleId: input.occurrence.schedule.id,
           date: input.occurrence.date,
@@ -156,11 +129,7 @@ export function DayPlan({
   });
 
   const move = usePlannerMutation((input: { scheduleId: string; startTime: string | null }) =>
-    localPreview
-      ? updateLocalPreviewSchedule(previewSeedDate, input.scheduleId, {
-          start_time: input.startTime,
-        })
-      : updateSchedule(input.scheduleId, { start_time: input.startTime }),
+    updateSchedule(input.scheduleId, { start_time: input.startTime }),
   );
 
   const grouped = groupByDayPart(displayedOccurrences);
@@ -178,18 +147,14 @@ export function DayPlan({
 
   const handleToggle = (occurrence: Occurrence, next: boolean) => {
     if (!occurrence.actionActive) return;
-    if (localPreview) {
-      toggle.mutate(
-        { occurrence, next },
-        {
-          onSuccess: () => toast.success(next ? "Действие выполнено" : "Отметка снята"),
-          onError: (error) =>
-            toast.error(error instanceof Error ? error.message : "Не удалось сохранить"),
-        },
-      );
-      return;
-    }
-    toggle.mutate({ occurrence, next });
+    toggle.mutate(
+      { occurrence, next },
+      {
+        onSuccess: () => toast.success(next ? "Действие выполнено" : "Отметка снята"),
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Не удалось сохранить"),
+      },
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -200,21 +165,6 @@ export function DayPlan({
     const occ = displayedOccurrences.find((o) => o.key === event.active.id);
     if (!occ?.actionActive) return;
     if (dayPartFor(occ.startTime) === target) return;
-    if (localPreview) {
-      const startTime = DAY_PART_TIME[target];
-      move.mutate(
-        { scheduleId: occ.schedule.id, startTime },
-        {
-          onSuccess: () =>
-            toast.success(
-              `${occ.action.name} → ${DAY_PARTS.find((part) => part.key === target)?.title ?? ""}`,
-            ),
-          onError: (error) =>
-            toast.error(error instanceof Error ? error.message : "Не удалось сохранить"),
-        },
-      );
-      return;
-    }
     move.mutate(
       { scheduleId: occ.schedule.id, startTime: DAY_PART_TIME[target] },
       {
@@ -222,6 +172,8 @@ export function DayPlan({
           toast.success(
             `${occ.action.name} → ${DAY_PARTS.find((p) => p.key === target)?.title ?? ""}`,
           ),
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Не удалось сохранить"),
       },
     );
   };

@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { handleWorkspaceApi } from "./cloud/workspace-api";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -45,8 +46,19 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
+  async fetch(request: Request, env: Cloudflare.Env | undefined, ctx: unknown) {
     try {
+      if (new URL(request.url).pathname === "/api/workspace") {
+        const runtimeEnv =
+          env ?? (globalThis as typeof globalThis & { __env__?: Cloudflare.Env }).__env__;
+        if (!runtimeEnv?.DB) {
+          return Response.json(
+            { error: "Cloudflare D1 binding недоступен." },
+            { status: 503, headers: { "cache-control": "no-store" } },
+          );
+        }
+        return await handleWorkspaceApi(request, runtimeEnv.DB);
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

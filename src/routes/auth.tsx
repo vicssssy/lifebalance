@@ -7,11 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { PrimaryButton, TextField } from "@/components/fields";
 import { Button } from "@/components/ui/button";
 import { Fingerprint as Sparkles } from "iconoir-react";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import { isCloudWorkspaceModeEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/auth")({
   beforeLoad: () => {
-    if (isLocalPreviewAuthBypassEnabled()) throw redirect({ to: "/today" });
+    if (isCloudWorkspaceModeEnabled()) throw redirect({ to: "/today" });
   },
   head: () => ({
     meta: [

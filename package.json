@@ -5,12 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "dev:cloud": "npm run build && wrangler d1 migrations apply lifebalance-db --local && wrangler dev --local",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy --secrets-file .env",
+    "deploy": "npm run build && wrangler d1 migrations apply lifebalance-db --remote && wrangler deploy",
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
     "cf:whoami": "wrangler whoami",
+    "cf:types": "wrangler types worker-configuration.d.ts",
+    "d1:migrate:local": "wrangler d1 migrations apply lifebalance-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply lifebalance-db --remote",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

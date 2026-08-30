@@ -8,6 +8,7 @@ import type {
   RitualItem,
   Schedule,
 } from "@/domain/types";
+import type { LegacyWorkspaceSnapshot } from "@/cloud/types";
 import { toDateKey } from "@/domain/schedule";
 import { createLocalPreviewGoals, createLocalPreviewSource } from "@/lib/local-preview-demo";
 
@@ -442,6 +443,18 @@ export function readLocalPreviewAttachments(seedDate: string, actionId?: string)
   return actionId
     ? attachments.filter((attachment) => attachment.action_id === actionId)
     : attachments;
+}
+
+/** Validated legacy browser state used once to bootstrap the private D1 workspace. */
+export function readLegacyWorkspaceSnapshot(seedDate: string): LegacyWorkspaceSnapshot {
+  const state = loadState(seedDate);
+  return {
+    seededFor: state.seededFor,
+    source: state.source,
+    goals: state.goals,
+    reflections: state.reflections,
+    attachments: state.attachments,
+  };
 }
 
 export async function createLocalPreviewGoal(

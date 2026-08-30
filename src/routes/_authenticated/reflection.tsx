@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { saveReflection } from "@/data/reflections";
 import { REFLECTION_QUESTIONS, type ReflectionField } from "@/domain/constants";
 import { factsForRange } from "@/domain/occurrences";
-import { addMonths, formatMonthTitle, monthStartKey, todayKey, toDateKey } from "@/domain/schedule";
-import { useAuth } from "@/hooks/useAuth";
+import { addMonths, formatMonthTitle, monthStartKey, toDateKey } from "@/domain/schedule";
 import { usePlannerMutation, usePlannerSource, useReflections } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
@@ -13,8 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/surface";
 import { NavArrowLeft as ChevronLeft, NavArrowRight as ChevronRight } from "iconoir-react";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
-import { saveLocalPreviewReflection } from "@/lib/local-preview-store";
 
 export const Route = createFileRoute("/_authenticated/reflection")({
   head: () => ({
@@ -32,10 +29,8 @@ export const Route = createFileRoute("/_authenticated/reflection")({
 });
 
 function ReflectionScreen() {
-  const { userId } = useAuth();
   const { source } = usePlannerSource();
   const { data: reflections = [] } = useReflections();
-  const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const [monthDate, setMonthDate] = useState(() => addMonths(new Date(), -1));
   const month = monthStartKey(monthDate);
@@ -57,10 +52,7 @@ function ReflectionScreen() {
       (acc, q) => ({ ...acc, [q.field]: answers[q.field] ?? saved?.[q.field] ?? null }),
       {},
     );
-    if (localPreview) {
-      return saveLocalPreviewReflection(todayKey(), { month, answers: nextAnswers });
-    }
-    return saveReflection({ userId: userId!, month, answers: nextAnswers });
+    return saveReflection({ month, answers: nextAnswers });
   });
 
   return (

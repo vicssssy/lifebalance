@@ -21,8 +21,8 @@ APP_URL="http://127.0.0.1:${APP_PORT}/today"
 cd "$PROJECT_DIR"
 clear 2>/dev/null || true
 
-echo "My Daily Flow — local app"
-echo "The app opens directly without sign-in."
+echo "My Daily Flow — Cloudflare D1 local preview"
+echo "The app opens directly without sign-in and uses a private local D1 workspace."
 echo ""
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
@@ -47,7 +47,11 @@ if [ ! -d node_modules ]; then
 fi
 
 echo "Starting My Daily Flow..."
-npm run dev -- --host 127.0.0.1 --port "$APP_PORT" --strictPort &
+echo "Building the app..."
+npm run build
+echo "Preparing the local D1 database..."
+./node_modules/.bin/wrangler d1 migrations apply lifebalance-db --local
+./node_modules/.bin/wrangler dev --local --ip 127.0.0.1 --port "$APP_PORT" &
 SERVER_PID=$!
 
 cleanup() {

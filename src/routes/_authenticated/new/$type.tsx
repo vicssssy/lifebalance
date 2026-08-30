@@ -3,10 +3,8 @@ import { useState } from "react";
 import { Plus, Xmark as X } from "iconoir-react";
 import { toast } from "sonner";
 import { createAction, type ScheduleDraft } from "@/data/actions";
-import { createGoal } from "@/data/goals";
 import { ACTION_FORMAT_NAME, RECURRING_TYPES, type ActionType } from "@/domain/constants";
 import { todayKey } from "@/domain/schedule";
-import { useAuth } from "@/hooks/useAuth";
 import { useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
 import { DurationPicker } from "@/components/DurationPicker";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
@@ -21,8 +19,6 @@ import {
 } from "@/components/planning";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StickyActions } from "@/components/StickyActions";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
-import { createLocalPreviewAction } from "@/lib/local-preview-store";
 
 const TYPES: ActionType[] = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 
@@ -56,9 +52,7 @@ function CreateAction() {
   const { type: rawType } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { userId } = useAuth();
   const { data: areas = [] } = useLifeAreas();
-  const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const type = (TYPES.includes(rawType as ActionType) ? rawType : "task") as ActionType;
   const recurring = RECURRING_TYPES.includes(type);
@@ -99,50 +93,12 @@ function CreateAction() {
           duration_seconds: durationSeconds,
         }));
 
-    if (localPreview) {
-      return createLocalPreviewAction(todayKey(), {
-        goalId: search.goalId ?? null,
-        newGoal:
-          !search.goalId && search.resultText && search.lifeAreaId
-            ? { lifeAreaId: search.lifeAreaId, resultText: search.resultText }
-            : null,
-        name: name.trim(),
-        type,
-        description: description.trim() || null,
-        durationSeconds,
-        whyImportant: whyImportant.trim() || null,
-        helpsWith: search.helpsWith ?? null,
-        startDate,
-        lifeAreaIds,
-        ritualItems:
-          type === "ritual"
-            ? items
-                .filter((item) => item.name.trim())
-                .map((item) => ({
-                  name: item.name.trim(),
-                  description: item.description.trim() || null,
-                }))
-            : [],
-        attachments,
-        schedules,
-      });
-    }
-
-    const goalId =
-      search.goalId ??
-      (search.resultText && search.lifeAreaId
-        ? (
-            await createGoal({
-              userId: userId!,
-              lifeAreaId: search.lifeAreaId,
-              resultText: search.resultText,
-            })
-          ).id
-        : null);
-
     return createAction({
-      userId: userId!,
-      goalId,
+      goalId: search.goalId ?? null,
+      newGoal:
+        !search.goalId && search.resultText && search.lifeAreaId
+          ? { lifeAreaId: search.lifeAreaId, resultText: search.resultText }
+          : null,
       name: name.trim(),
       type,
       description: description.trim() || null,
@@ -165,7 +121,6 @@ function CreateAction() {
   const canSave =
     Boolean(name.trim()) &&
     Boolean(startDate) &&
-    (localPreview || Boolean(userId)) &&
     (recurring ? weekdays.length > 0 : dates.length > 0) &&
     (type !== "ritual" || items.some((i) => i.name.trim()));
 

@@ -6,16 +6,24 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "binding": "ASSETS",
-    "directory": ".output/public"
+    "directory": ".output/public",
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lifebalance-db",
+      "database_id": "922307ea-4247-4a4f-a17c-f9820bcc838c",
+      "migrations_dir": "migrations",
+    },
+  ],
   "no_bundle": true,
   "rules": [
     {
       "type": "ESModule",
-      "globs": ["**/*.mjs", "**/*.js"]
-    }
+      "globs": ["**/*.mjs", "**/*.js"],
+    },
   ],
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
 }

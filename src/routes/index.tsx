@@ -3,11 +3,11 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparks as Sparkles } from "iconoir-react";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
+import { isCloudWorkspaceModeEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
-    if (isLocalPreviewAuthBypassEnabled()) throw redirect({ to: "/today" });
+    if (isCloudWorkspaceModeEnabled()) throw redirect({ to: "/today" });
   },
   head: () => ({
     meta: [

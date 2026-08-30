@@ -42,7 +42,6 @@ import {
   todayKey,
 } from "@/domain/schedule";
 import type { RitualItem } from "@/domain/types";
-import { useAuth } from "@/hooks/useAuth";
 import { useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { DayPicker } from "@/components/planning";
 import { DurationSheet, DurationWheels, PickerSheet, TimeSheet } from "@/components/pickers";
@@ -53,17 +52,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Divider, EditableSection, PageContainer, Section } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
-import {
-  readLocalPreviewAttachments,
-  reorderLocalPreviewRitualItems,
-  rescheduleLocalPreviewAction,
-  setLocalPreviewActionStatus,
-  toggleLocalPreviewRitualItem,
-  updateLocalPreviewAction,
-  updateLocalPreviewRitualItem,
-  updateLocalPreviewSchedule,
-} from "@/lib/local-preview-store";
 
 export const Route = createFileRoute("/_authenticated/action/$actionId")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -228,11 +216,8 @@ function ActionDetail() {
   const { actionId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { userId } = useAuth();
   const { source, isLoading } = usePlannerSource();
   const { data: areas = [] } = useLifeAreas();
-  const localPreview = isLocalPreviewAuthBypassEnabled();
-  const previewSeedDate = todayKey();
 
   const [sheet, setSheet] = useState<"time" | "duration" | "start" | "move" | null>(null);
   const [moveDate, setMoveDate] = useState<string>(todayKey());
@@ -251,11 +236,8 @@ function ActionDetail() {
     null;
 
   const { data: attachments = [] } = useQuery({
-    queryKey: ["attachments", actionId, localPreview ? "local-preview" : "remote"],
-    queryFn: localPreview
-      ? () => Promise.resolve(readLocalPreviewAttachments(previewSeedDate, actionId))
-      : () => fetchAttachments(actionId),
-    staleTime: localPreview ? Infinity : 0,
+    queryKey: ["attachments", actionId],
+    queryFn: () => fetchAttachments(actionId),
   });
 
   const items = source.ritualItems
@@ -284,98 +266,51 @@ function ActionDetail() {
   const doneCount = items.filter((i) => itemDone(i.id)).length;
 
   const complete = usePlannerMutation(() =>
-    localPreview
-      ? setLocalPreviewActionStatus(
-          previewSeedDate,
-          { actionId, scheduleId: schedule!.id, date },
-          "completed",
-        )
-      : markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
+    markActionCompleted({ actionId, scheduleId: schedule!.id, date }),
   );
 
   const skip = usePlannerMutation(() =>
-    localPreview
-      ? setLocalPreviewActionStatus(
-          previewSeedDate,
-          { actionId, scheduleId: schedule!.id, date },
-          "skipped",
-        )
-      : markActionSkipped({ userId: userId!, actionId, scheduleId: schedule!.id, date }),
+    markActionSkipped({ actionId, scheduleId: schedule!.id, date }),
   );
 
-  const move = usePlannerMutation(() => {
-    if (localPreview) {
-      return rescheduleLocalPreviewAction(previewSeedDate, {
-        scheduleId: schedule!.id,
-        repeatType: schedule!.repeat_type,
-        date: moveDate,
-        startTime: moveTime || null,
-        durationSeconds: moveDuration,
-      });
-    }
-    return rescheduleAction({
+  const move = usePlannerMutation(() =>
+    rescheduleAction({
       scheduleId: schedule!.id,
       repeatType: schedule!.repeat_type,
       date: moveDate,
       startTime: moveTime || null,
       durationSeconds: moveDuration,
-    });
-  });
+    }),
+  );
 
   const toggleItem = usePlannerMutation(async (input: { itemId: string; done: boolean }) => {
-    if (localPreview) {
-      await toggleLocalPreviewRitualItem(previewSeedDate, {
-        ritualItemId: input.itemId,
-        scheduleId: schedule!.id,
-        date,
-        done: input.done,
-      });
-    } else {
-      await toggleRitualItem({
-        userId: userId!,
-        ritualItemId: input.itemId,
-        scheduleId: schedule!.id,
-        date,
-        done: input.done,
-      });
-    }
+    await toggleRitualItem({
+      ritualItemId: input.itemId,
+      scheduleId: schedule!.id,
+      date,
+      done: input.done,
+    });
     // Когда выполнены все пункты — ритуал становится выполненным.
     const nextDone = input.done ? doneCount + 1 : doneCount - 1;
     if (items.length && nextDone >= items.length && !completed) {
-      if (localPreview) {
-        await setLocalPreviewActionStatus(
-          previewSeedDate,
-          { actionId, scheduleId: schedule!.id, date },
-          "completed",
-        );
-      } else {
-        await markActionCompleted({ userId: userId!, actionId, scheduleId: schedule!.id, date });
-      }
+      await markActionCompleted({ actionId, scheduleId: schedule!.id, date });
     }
   });
 
   const patch = usePlannerMutation((input: Parameters<typeof updateAction>[1]) =>
-    localPreview
-      ? updateLocalPreviewAction(previewSeedDate, actionId, input)
-      : updateAction(actionId, input),
+    updateAction(actionId, input),
   );
 
   const patchSchedule = usePlannerMutation((input: Parameters<typeof updateSchedule>[1]) =>
-    localPreview
-      ? updateLocalPreviewSchedule(previewSeedDate, schedule!.id, input)
-      : updateSchedule(schedule!.id, input),
+    updateSchedule(schedule!.id, input),
   );
 
   const patchItem = usePlannerMutation(
     (input: { itemId: string; patch: Parameters<typeof updateRitualItem>[1] }) =>
-      localPreview
-        ? updateLocalPreviewRitualItem(previewSeedDate, input.itemId, input.patch)
-        : updateRitualItem(input.itemId, input.patch),
+      updateRitualItem(input.itemId, input.patch),
   );
 
-  const reorder = usePlannerMutation((ids: string[]) =>
-    localPreview ? reorderLocalPreviewRitualItems(previewSeedDate, ids) : reorderRitualItems(ids),
-  );
+  const reorder = usePlannerMutation((ids: string[]) => reorderRitualItems(ids));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),

@@ -23,8 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { AppIcon } from "@/components/ui/icon";
-import { isLocalPreviewAuthBypassEnabled } from "@/lib/local-preview";
-import { setLocalPreviewGoalStatus } from "@/lib/local-preview-store";
 import type { GoalStatus } from "@/domain/types";
 
 const ACTION_ICON: Record<ActionType, AppIcon> = {
@@ -60,14 +58,10 @@ function GoalsScreen() {
   const { data: goals = [] } = useGoals();
   const { source } = usePlannerSource();
   const [showArchive, setShowArchive] = useState(false);
-  const localPreview = isLocalPreviewAuthBypassEnabled();
 
   const closeGoal = usePlannerMutation(
     async ({ goalId, status }: { goalId: string; status: Exclude<GoalStatus, "active"> }) => {
       const closedOn = todayKey();
-      if (localPreview) {
-        return setLocalPreviewGoalStatus(closedOn, goalId, status, closedOn);
-      }
       await setGoalStatus(goalId, status, closedOn);
     },
   );

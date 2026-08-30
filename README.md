@@ -8,10 +8,14 @@ Install Node.js and npm, then run:
 
 ```sh
 npm install
-npm run dev
+npm run dev:cloud
 ```
 
 You can also double-click `Preview My Daily Flow.command` on macOS to launch the app locally.
+
+The application stores each browser's private workspace in Cloudflare D1. Local development uses
+Wrangler's local D1 database; production migrations are applied by `npm run deploy` before the
+Worker is published.
 
 ## Built with
 
@@ -19,4 +23,4 @@ You can also double-click `Preview My Daily Flow.command` on macOS to launch the
 - TypeScript
 - React
 - Tailwind CSS
-- Supabase
+- Cloudflare Workers and D1
