@@ -194,4 +194,18 @@
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 
+## Today calendar hero QA — 30 August 2026
+
+- Annotated placement source: `/Users/arthurberlin/Downloads/Сегодня — Путь.png` (1206 × 2622 px).
+- Selected visual reference: `/Users/arthurberlin/Downloads/IMG_1236.jpeg` (1206 × 2048 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/today-date-hero/today-430x932.png`.
+- Normalized reference comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/today-date-hero/reference-vs-implementation.png`.
+- The former plain `Сегодня / дата` heading is replaced only on Today by a compact glass calendar hero: large day number, primary accent dot, `Сегодня`, full Russian date, and the current day plus six following days.
+- The selected day uses existing `secondary` and `primary` tokens; typography, material, radius, shadow, and spacing remain within the established phone-app design system. No new color or icon language was introduced.
+- All date values are calculated from the same `todayKey()` used by planner occurrences. The hero is informational and does not introduce new navigation or change the Today route, planner query, completion logic, or approved Russian terminology.
+- At 320, 390, and 430 px, all seven day cells remained on one row, the hero stayed inside the phone canvas, and document `scrollWidth` did not exceed `clientWidth`.
+- The hero height remained 186 px at every tested width; DayProgress starts immediately below it and the first action remains visible in the initial phone viewport.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed
