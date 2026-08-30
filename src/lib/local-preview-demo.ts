@@ -67,8 +67,8 @@ export function createLocalPreviewGoals(date: string): Goal[] {
 }
 
 /**
- * Five substantial starter examples for the sign-in-free browser-local app.
- * The authenticated data path continues to use Supabase unchanged.
+ * Five substantial starter examples for the sign-in-free cloud workspace.
+ * They are imported into D1 on the first visit and then use the normal API path.
  */
 export function createLocalPreviewSource(date: string): PlannerRecords {
   const createdAt = `${date}T06:00:00.000Z`;

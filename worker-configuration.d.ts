@@ -4,12 +4,6 @@
 interface __BaseEnv_Env {
 	DB: D1Database;
 	ASSETS: Fetcher;
-	SUPABASE_PROJECT_ID: string;
-	SUPABASE_PUBLISHABLE_KEY: string;
-	SUPABASE_URL: string;
-	VITE_SUPABASE_PROJECT_ID: string;
-	VITE_SUPABASE_PUBLISHABLE_KEY: string;
-	VITE_SUPABASE_URL: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -22,7 +16,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPABASE_PROJECT_ID" | "SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_URL" | "VITE_SUPABASE_PROJECT_ID" | "VITE_SUPABASE_PUBLISHABLE_KEY" | "VITE_SUPABASE_URL">> {}
+	interface ProcessEnv {}
 }
 
 // Begin runtime types

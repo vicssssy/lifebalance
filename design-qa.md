@@ -70,7 +70,7 @@
 
 ## Goals methodology QA — 29 August 2026
 
-- The empty local-preview Goals query was replaced with five demo results using the existing `Goal` schema; production still calls the original Supabase `fetchGoals` path.
+- The empty first-run Goals state was replaced with five starter results using the existing `Goal` schema; production persists the imported workspace in Cloudflare D1.
 - Each result belongs to one approved life area and each of the five existing demo actions now references its result through `goal_id` and its sphere through `actionLifeAreas`.
 - Browser verification confirmed five active result groups in the original life-area order, with one linked action and the correct action-format badge in every group.
 - The local-only “Результат достигнут” behavior removes the result from Active and assigns completed status for the Archive view; the production mutation remains unchanged.
@@ -148,7 +148,7 @@
 - The public no-sign-in workspace is now the permanent application mode. `/` and `/auth` both forward to `/today`; no sign-in or demo-mode notice remains.
 - Existing planner edits, completion, skipping, moving, ritual progress and order, new actions and optional goals, URL attachments, goal completion, and monthly reflection answers persist in the browser. Existing stored planner data is migrated in place, starter content is seeded only once, and historical dates are no longer rolled forward each day.
 - Browser flow checks covered root/auth forwarding, action creation, optional goal creation, Goal completion and Archive persistence, Reflection saving, URL attachment persistence, action-detail editing, reload persistence, and Today rendering. The fresh-browser console contained 0 errors and 0 warnings.
-- TypeScript, targeted ESLint, shell syntax, production build, and Wrangler dry-run passed. Existing production Supabase data functions and authenticated branches remain intact.
+- TypeScript, targeted ESLint, shell syntax, production build, and Wrangler dry-run passed. The production data path uses the Cloudflare Worker API and D1.
 
 ### Defect gate
 

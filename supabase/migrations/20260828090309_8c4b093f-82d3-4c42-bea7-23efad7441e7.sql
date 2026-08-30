@@ -1,2 +1,0 @@
-ALTER TABLE public.completions DROP CONSTRAINT IF EXISTS completions_status_check;
-ALTER TABLE public.completions ADD CONSTRAINT completions_status_check CHECK (status IN ('completed','in_progress','skipped'));

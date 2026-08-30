@@ -17,6 +17,11 @@ The application stores each browser's private workspace in Cloudflare D1. Local 
 Wrangler's local D1 database; production migrations are applied by `npm run deploy` before the
 Worker is published.
 
+Sign-in is currently hidden. The D1 schema already contains provider-neutral users, verified
+identity links, and workspace memberships so a future authentication provider can attach the
+existing browser workspace to an account and reuse it on other devices without rewriting planner
+history.
+
 ## Built with
 
 - TanStack Start

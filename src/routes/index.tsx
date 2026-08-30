@@ -1,13 +1,10 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparks as Sparkles } from "iconoir-react";
-import { isCloudWorkspaceModeEnabled } from "@/lib/local-preview";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
-    if (isCloudWorkspaceModeEnabled()) throw redirect({ to: "/today" });
+    throw redirect({ to: "/today" });
   },
   head: () => ({
     meta: [
@@ -28,13 +25,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const { userId, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && userId) navigate({ to: "/today", replace: true });
-  }, [loading, userId, navigate]);
-
   return (
     <div className="app-screen mx-auto flex min-h-dvh w-full max-w-md flex-col justify-between px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] min-[380px]:px-6 min-[380px]:pt-16">
       <div className="animate-rise">
