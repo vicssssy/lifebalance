@@ -4,7 +4,6 @@ import { addDays, formatDayShort, fromDateKey, todayKey } from "@/domain/schedul
 import { usePlannerSource } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { DayPlan } from "@/components/DayPlan";
-import { DayProgress } from "@/components/DayProgress";
 
 export const Route = createFileRoute("/_authenticated/today")({
   head: () => ({
@@ -84,14 +83,11 @@ function TodayScreen() {
       {isLoading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Загружаем план…</p>
       ) : (
-        <>
-          <DayProgress occurrences={occurrences} />
-          <DayPlan
-            occurrences={occurrences}
-            emptyText="На сегодня пока ничего не запланировано. Нажми ＋, чтобы добавить действие."
-            maxTitleLines={2}
-          />
-        </>
+        <DayPlan
+          occurrences={occurrences}
+          emptyText="На сегодня пока ничего не запланировано. Нажми ＋, чтобы добавить действие."
+          maxTitleLines={2}
+        />
       )}
     </AppScreen>
   );

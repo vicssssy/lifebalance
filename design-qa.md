@@ -208,4 +208,16 @@
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 
+## Today progress-card removal QA — 30 August 2026
+
+- Reported source: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-12ece24d-ad9b-4db2-a985-986932eb35a7.png` (856 × 318 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/hide-day-progress/today-390x844.png`.
+- Normalized before/after comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/hide-day-progress/before-vs-after.png`.
+- Removed the entire DayProgress surface from Today: completion count, percentage, progress bar, and `Дальше:` line are no longer rendered.
+- The calendar hero now flows directly into the first day-part heading with a consistent 24 px visual gap. No empty placeholder or hidden-height residue remains.
+- Completion buttons, saved completion state, planner occurrence logic, calendar view, action detail, and all route navigation remain unchanged.
+- At 320, 390, and 430 px, no progress text or progressbar role was present, the first day part started at the same stable position, and document `scrollWidth` did not exceed `clientWidth`.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed
