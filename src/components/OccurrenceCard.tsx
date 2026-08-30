@@ -84,7 +84,7 @@ export function OccurrenceCard({
 
       <div
         className={cn(
-          "flex min-w-0 items-start rounded-[24px] border border-white/85 bg-white/74 shadow-[0_18px_44px_rgb(38_38_70_/_0.08)] backdrop-blur-2xl transition-[transform,box-shadow] duration-200 active:scale-[0.99]",
+          "flex min-w-0 items-center rounded-[24px] border border-white/85 bg-white/74 shadow-[0_18px_44px_rgb(38_38_70_/_0.08)] backdrop-blur-2xl transition-[transform,box-shadow] duration-200 active:scale-[0.99]",
           muted && "bg-white/55 shadow-low",
           skipped && "border-dashed border-border/80",
         )}
@@ -121,7 +121,7 @@ export function OccurrenceCard({
           aria-pressed={completed}
           onClick={() => onToggle?.(occurrence, !completed)}
           disabled={!onToggle}
-          className="focus-ring touch-target mr-0.5 mt-2 flex shrink-0 items-center justify-center rounded-full"
+          className="focus-ring touch-target mr-0.5 flex shrink-0 items-center justify-center rounded-full"
         >
           <span
             className={cn(

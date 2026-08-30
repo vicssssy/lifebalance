@@ -231,4 +231,17 @@
 - TypeScript, targeted ESLint, formatting, and diff validation passed.
 - P0/P1/P2 findings remaining: none.
 
+## Action-card vertical alignment QA — 30 August 2026
+
+- Reported source: `/Users/arthurberlin/Downloads/Screenshot 2026-08-30 at 10.52.01.png` (1260 × 314 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-vertical-alignment/today-390-full.png`.
+- Normalized visual comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-vertical-alignment/reference-vs-centered.png`.
+- Root cause: the variable-height text link and both 44 px controls were top-aligned, while the completion control also had an independent top margin. This produced three different vertical centers on taller cards.
+- The completion control and drag/menu control now share the exact card midpoint. DOM measurements across one-line, two-line, and taller titles reported a 0 px midpoint difference for both controls.
+- The left timeline rail remains intentionally anchored to the start of the occurrence row; only the controls inside the white action card changed alignment.
+- At 320, 390, and 430 px, every completion and drag control remained 44 × 44 px, Today title clamping remained at two lines, and document `scrollWidth` did not exceed `clientWidth`.
+- Completion was toggled on and back off successfully after the alignment change. Fresh browser console errors: 0.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed
