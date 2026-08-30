@@ -238,9 +238,21 @@
 - Normalized visual comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-vertical-alignment/reference-vs-centered.png`.
 - Root cause: the variable-height text link and both 44 px controls were top-aligned, while the completion control also had an independent top margin. This produced three different vertical centers on taller cards.
 - The completion control and drag/menu control now share the exact card midpoint. DOM measurements across one-line, two-line, and taller titles reported a 0 px midpoint difference for both controls.
-- The left timeline rail remains intentionally anchored to the start of the occurrence row; only the controls inside the white action card changed alignment.
+- At this stage, the left timeline rail remained anchored to the start of the occurrence row; the follow-up below centers it with the card.
 - At 320, 390, and 430 px, every completion and drag control remained 44 × 44 px, Today title clamping remained at two lines, and document `scrollWidth` did not exceed `clientWidth`.
 - Completion was toggled on and back off successfully after the alignment change. Fresh browser console errors: 0.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
+- P0/P1/P2 findings remaining: none.
+
+## Action icon-and-time rail centering QA — 30 August 2026
+
+- Reported source: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-90feb195-17d4-4345-b5cf-4c08b9315cd5.png` (850 × 270 px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-rail-center/today-390.png`.
+- Normalized visual comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/card-rail-center/reference-vs-centered.png`.
+- Root cause: the full-height left rail aligned its icon-and-time stack to the top even after the controls inside the white card had been centered.
+- The complete icon-and-time stack now uses the exact midpoint of its action card. DOM measurements reported a 0 px midpoint difference for cards with one-line, two-line, metadata, and no-metadata content.
+- Completion and drag/menu controls remain centered at the same midpoint. Their 44 × 44 px targets, action links, drag behavior, title clamp, and saved planner logic are unchanged.
+- At 320, 390, and 430 px, the rail, text content, completion control, and menu stayed aligned without horizontal overflow.
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 

@@ -68,7 +68,7 @@ export function OccurrenceCard({
         drag?.isDragging && "relative z-20 shadow-mid",
       )}
     >
-      <div className="relative flex min-h-full flex-col items-center">
+      <div className="relative flex min-h-full flex-col items-center justify-center">
         <span
           className="flex size-10 items-center justify-center rounded-full border border-white/80 bg-primary text-primary-foreground shadow-[0_12px_26px_rgb(96_71_232_/_0.28)]"
           aria-hidden
