@@ -220,4 +220,15 @@
 - TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 
+## Today date-switching QA — 30 August 2026
+
+- Reported source: `/var/folders/9q/f2w2qrrd1ddg3gb4vczcfzmc0000gn/T/codex-clipboard-cb092084-96d1-4894-a846-c6f649add1de.png` (856 × 402 px).
+- Root cause: the seven date cells were static `div` elements, the selected style was fixed to the first cell, and Today always passed `todayKey()` into `occurrencesForDate`.
+- Each of the seven cells is now a native 64 px button. Selecting one updates the large day number, Russian weekday/date label, active styling, and the DayPlan occurrence date without changing routes or data contracts.
+- The seven-day range remains anchored to today, so a selected future date does not shift the row. Today is exposed with `aria-current="date"`; the selected date is exposed independently through `aria-pressed`.
+- Browser interaction verified 30 August → 31 August → 1 September. The selected button, hero label, action list, and action-detail `date` search parameter all updated consistently; the console exposed no alert/error state.
+- At 320, 390, and 430 px all seven buttons stayed on one row, exactly one date remained selected, and document `scrollWidth` did not exceed `clientWidth`.
+- TypeScript, targeted ESLint, formatting, and diff validation passed.
+- P0/P1/P2 findings remaining: none.
+
 Final result: passed
