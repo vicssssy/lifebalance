@@ -269,4 +269,17 @@
 - Fresh browser console errors: 0. TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed.
 - P0/P1/P2 findings remaining: none.
 
+## iPhone bottom safe-area continuity QA — 30 August 2026
+
+- Reported iPhone source: `/Users/arthurberlin/Downloads/Сегодня — Путь 2.png` (1260 × 2736 px, DPR 3 / 420 × 912 CSS px).
+- Browser implementation: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/safe-area-fix/today-420x912.png` (420 × 912 px).
+- Focused normalized comparison: `/Users/arthurberlin/Documents/Codex/2026-08-29/sites-plugin-sites-openai-bundled/work/safe-area-fix/source-vs-fixed.png` (the final 720 source pixels were normalized to 420 × 240 CSS pixels and compared with the final 420 × 240 implementation region).
+- Pixel inspection found a uniform `#f6f7fc` strip from source row 2634 through 2735: 102 device pixels, exactly 34 CSS px at DPR 3. This matches the iPhone home-indicator safe area rather than an application margin or spacer.
+- The navigation already ended exactly at the CSS viewport bottom and retained safe-area padding inside the white dock. Current Safari/WKWebView excluded the hardware inset from that viewport and painted the remaining browser canvas with the gray page background.
+- The root browser canvas is now white while `body` and `.phone-app-shell` retain the established `#f6f7fc` application background. The browser-owned inset therefore continues the white dock without moving navigation content beneath the home indicator.
+- No navigation component, route, fixed-position geometry, safe-area padding, action behavior, terminology, typography, icon, or data logic changed.
+- At 320, 390, 420, and 430 px, the navigation remained flush with the CSS viewport, all five targets remained at least 44 px, the center action remained 64 × 64 px, and `scrollWidth` equalled `clientWidth`. At 600 px, the existing desktop gradient and centered 430 px phone shell remained unchanged.
+- The in-app browser cannot reproduce iOS's browser-owned 34 px hardware region; the fix was verified through the source pixel measurement, computed root/nav colors, the normalized focused comparison, unchanged geometry, and a fresh console with 0 errors. A physical-iPhone reload remains the final platform-specific confirmation.
+- TypeScript, targeted ESLint, formatting, diff validation, production build, and Wrangler dry-run passed. P0/P1/P2 findings remaining: none.
+
 Final result: passed
