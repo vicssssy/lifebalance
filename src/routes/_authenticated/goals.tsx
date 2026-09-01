@@ -204,7 +204,11 @@ function GoalsScreen() {
                                   <Link
                                     to="/action/$actionId"
                                     params={{ actionId: action.id }}
-                                    search={{ date: undefined, scheduleId: undefined }}
+                                    search={{
+                                      date: undefined,
+                                      scheduleId: undefined,
+                                      edit: undefined,
+                                    }}
                                     className="focus-ring group/action flex min-h-20 min-w-0 items-start gap-2 border-t border-white/85 py-3 pl-0.5 pr-1 transition-colors duration-200 hover:text-primary"
                                   >
                                     <span className="min-w-0 flex-1">

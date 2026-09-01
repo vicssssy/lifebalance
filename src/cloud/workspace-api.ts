@@ -203,6 +203,46 @@ const actionDraftSchema = z.object({
     .max(100),
 });
 
+const actionConfigurationDraftSchema = z.object({
+  name: z.string().min(1).max(500),
+  description: nullableText(),
+  durationSeconds: nullableNumber,
+  whyImportant: nullableText(),
+  startDate: dateKey,
+  lifeAreaIds: z.array(id).max(3),
+  ritualItems: z
+    .array(
+      z.object({
+        id: id.optional(),
+        name: z.string().min(1).max(500),
+        description: nullableText(),
+      }),
+    )
+    .max(100),
+  attachments: z
+    .array(
+      z.object({
+        id: id.optional(),
+        type: z.enum(["video", "audio", "link"]),
+        url: z.string().min(1).max(8_000),
+        title: nullableText(1_000),
+      }),
+    )
+    .max(100),
+  schedules: z
+    .array(
+      z.object({
+        id: id.optional(),
+        repeat_type: z.enum(["once", "weekly"]),
+        scheduled_date: dateKey.nullable(),
+        weekdays: z.array(z.number().int().min(1).max(7)).max(7),
+        start_time: z.string().regex(TIME_VALUE).nullable(),
+        duration_seconds: nullableNumber,
+      }),
+    )
+    .max(100),
+});
+
 const operationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("createGoal"),
@@ -218,6 +258,11 @@ const operationSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("setGoalStatus"), goalId: id, status: goalStatus, closedOn: dateKey }),
   z.object({ type: z.literal("createAction"), draft: actionDraftSchema }),
+  z.object({
+    type: z.literal("updateActionConfiguration"),
+    actionId: id,
+    draft: actionConfigurationDraftSchema,
+  }),
   z.object({ type: z.literal("updateAction"), actionId: id, patch: actionPatchSchema }),
   z.object({
     type: z.literal("addRitualItem"),
@@ -559,7 +604,7 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
       .bind(workspaceId),
     db
       .prepare(
-        "SELECT id, ritual_action_id, name, description, duration_seconds, sort_order FROM ritual_items WHERE workspace_id = ? ORDER BY sort_order",
+        "SELECT id, ritual_action_id, name, description, duration_seconds, sort_order FROM ritual_items WHERE workspace_id = ? AND archived_at IS NULL ORDER BY sort_order",
       )
       .bind(workspaceId),
     db
@@ -576,7 +621,9 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
       )
       .bind(workspaceId),
     db
-      .prepare("SELECT id, action_id, type, url, title FROM attachments WHERE workspace_id = ?")
+      .prepare(
+        "SELECT id, action_id, type, url, title FROM attachments WHERE workspace_id = ? AND archived_at IS NULL",
+      )
       .bind(workspaceId),
   ]);
   const rows = (index: number): Record<string, unknown>[] =>
@@ -824,6 +871,220 @@ async function mutate(
       }
       await db.batch(statements);
       return action;
+    }
+    case "updateActionConfiguration": {
+      await assertOwned(db, "actions", "id", operation.actionId, workspaceId);
+      const draft = operation.draft;
+      const [ritualRows, attachmentRows, scheduleRows] = await Promise.all([
+        db
+          .prepare(
+            "SELECT id FROM ritual_items WHERE workspace_id = ? AND ritual_action_id = ? AND archived_at IS NULL",
+          )
+          .bind(workspaceId, operation.actionId)
+          .all<{ id: string }>(),
+        db
+          .prepare(
+            "SELECT id FROM attachments WHERE workspace_id = ? AND action_id = ? AND archived_at IS NULL",
+          )
+          .bind(workspaceId, operation.actionId)
+          .all<{ id: string }>(),
+        db
+          .prepare(
+            "SELECT id FROM schedules WHERE workspace_id = ? AND action_id = ? AND status = 'planned'",
+          )
+          .bind(workspaceId, operation.actionId)
+          .all<{ id: string }>(),
+      ]);
+      const ritualIds = new Set(ritualRows.results.map((row) => row.id));
+      const attachmentIds = new Set(attachmentRows.results.map((row) => row.id));
+      const scheduleIds = new Set(scheduleRows.results.map((row) => row.id));
+      const requestedRitualIds = new Set(
+        draft.ritualItems.flatMap((item) => (item.id ? [item.id] : [])),
+      );
+      const requestedAttachmentIds = new Set(
+        draft.attachments.flatMap((item) => (item.id ? [item.id] : [])),
+      );
+      const requestedScheduleIds = new Set(
+        draft.schedules.flatMap((item) => (item.id ? [item.id] : [])),
+      );
+
+      if ([...requestedRitualIds].some((itemId) => !ritualIds.has(itemId)))
+        throw new WorkspaceRequestError("Пункт ритуала не принадлежит действию.", 400);
+      if ([...requestedAttachmentIds].some((itemId) => !attachmentIds.has(itemId)))
+        throw new WorkspaceRequestError("Материал не принадлежит действию.", 400);
+      if ([...requestedScheduleIds].some((itemId) => !scheduleIds.has(itemId)))
+        throw new WorkspaceRequestError("Расписание не принадлежит действию.", 400);
+
+      const statements: D1PreparedStatement[] = [
+        db
+          .prepare(
+            "UPDATE actions SET name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ? WHERE id = ? AND workspace_id = ?",
+          )
+          .bind(
+            draft.name.trim(),
+            draft.description,
+            draft.durationSeconds,
+            draft.whyImportant,
+            draft.startDate,
+            operation.actionId,
+            workspaceId,
+          ),
+        db
+          .prepare("DELETE FROM action_life_areas WHERE workspace_id = ? AND action_id = ?")
+          .bind(workspaceId, operation.actionId),
+      ];
+
+      for (const lifeAreaId of [...new Set(draft.lifeAreaIds)].slice(0, 3)) {
+        statements.push(
+          db
+            .prepare(
+              "INSERT INTO action_life_areas (workspace_id, action_id, life_area_id) VALUES (?, ?, ?)",
+            )
+            .bind(workspaceId, operation.actionId, lifeAreaId),
+        );
+      }
+
+      draft.ritualItems.forEach((item, index) => {
+        if (item.id) {
+          statements.push(
+            db
+              .prepare(
+                "UPDATE ritual_items SET name = ?, description = ?, sort_order = ?, archived_at = NULL WHERE id = ? AND workspace_id = ? AND ritual_action_id = ?",
+              )
+              .bind(
+                item.name.trim(),
+                item.description,
+                index,
+                item.id,
+                workspaceId,
+                operation.actionId,
+              ),
+          );
+        } else {
+          statements.push(
+            db
+              .prepare(
+                "INSERT INTO ritual_items (id, workspace_id, ritual_action_id, name, description, duration_seconds, sort_order, archived_at) VALUES (?, ?, ?, ?, ?, NULL, ?, NULL)",
+              )
+              .bind(
+                crypto.randomUUID(),
+                workspaceId,
+                operation.actionId,
+                item.name.trim(),
+                item.description,
+                index,
+              ),
+          );
+        }
+      });
+      for (const itemId of ritualIds) {
+        if (!requestedRitualIds.has(itemId)) {
+          statements.push(
+            db
+              .prepare(
+                "UPDATE ritual_items SET archived_at = ? WHERE id = ? AND workspace_id = ? AND ritual_action_id = ?",
+              )
+              .bind(now, itemId, workspaceId, operation.actionId),
+          );
+        }
+      }
+
+      for (const attachment of draft.attachments) {
+        if (attachment.id) {
+          statements.push(
+            db
+              .prepare(
+                "UPDATE attachments SET type = ?, url = ?, title = ?, archived_at = NULL WHERE id = ? AND workspace_id = ? AND action_id = ?",
+              )
+              .bind(
+                attachment.type,
+                attachment.url.trim(),
+                attachment.title,
+                attachment.id,
+                workspaceId,
+                operation.actionId,
+              ),
+          );
+        } else {
+          statements.push(
+            db
+              .prepare(
+                "INSERT INTO attachments (id, workspace_id, action_id, type, url, title, archived_at) VALUES (?, ?, ?, ?, ?, ?, NULL)",
+              )
+              .bind(
+                crypto.randomUUID(),
+                workspaceId,
+                operation.actionId,
+                attachment.type,
+                attachment.url.trim(),
+                attachment.title,
+              ),
+          );
+        }
+      }
+      for (const attachmentId of attachmentIds) {
+        if (!requestedAttachmentIds.has(attachmentId)) {
+          statements.push(
+            db
+              .prepare(
+                "UPDATE attachments SET archived_at = ? WHERE id = ? AND workspace_id = ? AND action_id = ?",
+              )
+              .bind(now, attachmentId, workspaceId, operation.actionId),
+          );
+        }
+      }
+
+      for (const schedule of draft.schedules) {
+        if (schedule.id) {
+          statements.push(
+            db
+              .prepare(
+                "UPDATE schedules SET repeat_type = ?, scheduled_date = ?, weekdays_json = ?, start_time = ?, duration_seconds = ?, status = 'planned' WHERE id = ? AND workspace_id = ? AND action_id = ?",
+              )
+              .bind(
+                schedule.repeat_type,
+                schedule.scheduled_date,
+                JSON.stringify(schedule.weekdays),
+                schedule.start_time,
+                schedule.duration_seconds,
+                schedule.id,
+                workspaceId,
+                operation.actionId,
+              ),
+          );
+        } else {
+          statements.push(
+            db
+              .prepare(
+                "INSERT INTO schedules (id, workspace_id, action_id, repeat_type, scheduled_date, weekdays_json, start_time, duration_seconds, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'planned')",
+              )
+              .bind(
+                crypto.randomUUID(),
+                workspaceId,
+                operation.actionId,
+                schedule.repeat_type,
+                schedule.scheduled_date,
+                JSON.stringify(schedule.weekdays),
+                schedule.start_time,
+                schedule.duration_seconds,
+              ),
+          );
+        }
+      }
+      for (const scheduleId of scheduleIds) {
+        if (!requestedScheduleIds.has(scheduleId)) {
+          statements.push(
+            db
+              .prepare(
+                "UPDATE schedules SET status = 'cancelled' WHERE id = ? AND workspace_id = ? AND action_id = ?",
+              )
+              .bind(scheduleId, workspaceId, operation.actionId),
+          );
+        }
+      }
+
+      await db.batch(statements);
+      return null;
     }
     case "updateAction":
       await assertOwned(db, "actions", "id", operation.actionId, workspaceId);

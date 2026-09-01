@@ -1,5 +1,5 @@
 import { fetchCloudWorkspace, mutateCloudWorkspace } from "@/cloud/client";
-import type { CloudActionDraft } from "@/cloud/types";
+import type { CloudActionConfigurationDraft, CloudActionDraft } from "@/cloud/types";
 import type { ActionType } from "@/domain/constants";
 import type { Action, Attachment, RitualItem, Schedule } from "@/domain/types";
 
@@ -68,6 +68,13 @@ export async function updateAction(
   }>,
 ): Promise<void> {
   await mutateCloudWorkspace({ type: "updateAction", actionId, patch });
+}
+
+export async function updateActionConfiguration(
+  actionId: string,
+  draft: CloudActionConfigurationDraft,
+): Promise<void> {
+  await mutateCloudWorkspace({ type: "updateActionConfiguration", actionId, draft });
 }
 
 export async function addRitualItem(input: {

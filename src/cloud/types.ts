@@ -50,6 +50,34 @@ export interface CloudActionDraft {
   >;
 }
 
+export interface CloudActionConfigurationDraft {
+  name: string;
+  description: string | null;
+  durationSeconds: number | null;
+  whyImportant: string | null;
+  startDate: string;
+  lifeAreaIds: string[];
+  ritualItems: Array<{
+    id?: string;
+    name: string;
+    description: string | null;
+  }>;
+  attachments: Array<{
+    id?: string;
+    type: Attachment["type"];
+    url: string;
+    title: string | null;
+  }>;
+  schedules: Array<{
+    id?: string;
+    repeat_type: Schedule["repeat_type"];
+    scheduled_date: string | null;
+    weekdays: number[];
+    start_time: string | null;
+    duration_seconds: number | null;
+  }>;
+}
+
 export type CloudWorkspaceOperation =
   | {
       type: "createGoal";
@@ -60,6 +88,11 @@ export type CloudWorkspaceOperation =
   | { type: "updateGoal"; goalId: string; resultText: string; whyImportant: string | null }
   | { type: "setGoalStatus"; goalId: string; status: Goal["status"]; closedOn: string }
   | { type: "createAction"; draft: CloudActionDraft }
+  | {
+      type: "updateActionConfiguration";
+      actionId: string;
+      draft: CloudActionConfigurationDraft;
+    }
   | {
       type: "updateAction";
       actionId: string;

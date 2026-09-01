@@ -2,37 +2,20 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-  DndContext,
-  PointerSensor,
-  TouchSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import {
   Calendar,
   Check,
-  NavArrowRight as ChevronRight,
   Clock,
-  OpenNewWindow as ExternalLink,
-  MoreVert as GripVertical,
+  EditPencil,
   Hourglass,
   MultiplePages as Layers,
+  OpenNewWindow as ExternalLink,
   SkipNext as SkipForward,
   Undo as Undo2,
 } from "iconoir-react";
 import { toast } from "sonner";
-import {
-  fetchAttachments,
-  reorderRitualItems,
-  updateAction,
-  updateRitualItem,
-} from "@/data/actions";
+import { fetchAttachments, updateActionConfiguration } from "@/data/actions";
 import { markActionCompleted, markActionSkipped, toggleRitualItem } from "@/data/completions";
-import { rescheduleAction, updateSchedule } from "@/data/schedules";
+import { rescheduleAction } from "@/data/schedules";
 import { ACTION_FORMAT_NAME } from "@/domain/constants";
 import {
   formatDayShort,
@@ -41,22 +24,23 @@ import {
   fromDateKey,
   todayKey,
 } from "@/domain/schedule";
-import type { RitualItem } from "@/domain/types";
 import { useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
+import { ActionForm, type ActionFormValues } from "@/components/ActionForm";
+import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { DayPicker } from "@/components/planning";
-import { DurationSheet, DurationWheels, PickerSheet, TimeSheet } from "@/components/pickers";
+import { DurationWheels, PickerSheet } from "@/components/pickers";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StickyActions } from "@/components/StickyActions";
-import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Divider, EditableSection, PageContainer, Section } from "@/components/ui/layout";
+import { Divider, PageContainer, Section } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/action/$actionId")({
   validateSearch: (search: Record<string, unknown>) => ({
     date: search["date"] ? String(search["date"]) : undefined,
     scheduleId: search["scheduleId"] ? String(search["scheduleId"]) : undefined,
+    edit: search["edit"] === true || search["edit"] === "true" ? true : undefined,
   }),
   head: () => ({
     meta: [
@@ -69,114 +53,6 @@ export const Route = createFileRoute("/_authenticated/action/$actionId")({
   component: ActionDetail,
 });
 
-/** Значение, которое можно поменять нажатием. */
-function EditableChip({
-  icon: Icon,
-  children,
-  onClick,
-  disabled = false,
-}: {
-  icon: typeof Clock;
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3.5 text-sm font-medium text-foreground shadow-mid backdrop-blur-2xl transition-[background-color,box-shadow] duration-200 hover:bg-white/84 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-      {children}
-      <ChevronRight className="size-3.5 text-muted-foreground/70" strokeWidth={1.75} aria-hidden />
-    </button>
-  );
-}
-
-function RitualItemRow({
-  item,
-  done,
-  disabled,
-  readOnly,
-  onToggle,
-  onEdit,
-}: {
-  item: RitualItem;
-  done: boolean;
-  disabled: boolean;
-  readOnly: boolean;
-  onToggle: () => void;
-  onEdit: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: transform ? `translate3d(0, ${transform.y}px, 0)` : undefined,
-        transition: transition ?? undefined,
-      }}
-      className={cn(
-        "flex items-start gap-1 border-b border-white/75 bg-white/42 px-1.5 last:border-b-0",
-        isDragging && "relative z-20 shadow-mid",
-      )}
-    >
-      <button
-        type="button"
-        disabled={disabled || readOnly}
-        onClick={onToggle}
-        aria-label={done ? "Снять отметку" : "Отметить пункт"}
-        className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-xl"
-      >
-        <span
-          className={cn(
-            "flex size-5 items-center justify-center rounded-full transition-colors duration-200",
-            done ? "bg-primary text-primary-foreground" : "border border-border bg-secondary",
-          )}
-        >
-          {done ? <Check className="size-3.5" strokeWidth={2.5} aria-hidden /> : null}
-        </span>
-      </button>
-
-      <button
-        type="button"
-        disabled={readOnly}
-        onClick={onEdit}
-        className="focus-ring min-w-0 flex-1 rounded-xl px-1.5 py-3 text-left disabled:cursor-default"
-      >
-        <span
-          className={cn(
-            "block text-base",
-            done ? "text-muted-foreground line-through" : "text-foreground",
-          )}
-        >
-          {item.name}
-        </span>
-        {item.description ? (
-          <span className="mt-0.5 block text-sm text-muted-foreground">{item.description}</span>
-        ) : null}
-      </button>
-
-      <button
-        type="button"
-        disabled={readOnly}
-        aria-label="Изменить порядок"
-        {...attributes}
-        {...listeners}
-        className="touch-target flex shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground/70 disabled:cursor-default disabled:opacity-45"
-      >
-        <GripVertical className="size-4" strokeWidth={1.75} aria-hidden />
-      </button>
-    </div>
-  );
-}
-
-/** Круглая кнопка-действие с подписью. */
 function CircleAction({
   icon: Icon,
   label,
@@ -212,67 +88,69 @@ function CircleAction({
   );
 }
 
+function MetaChip({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3.5 text-sm font-medium text-foreground shadow-mid backdrop-blur-2xl">
+      <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+      {children}
+    </span>
+  );
+}
+
 function ActionDetail() {
   const { actionId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { source, isLoading } = usePlannerSource();
   const { data: areas = [] } = useLifeAreas();
-
-  const [sheet, setSheet] = useState<"time" | "duration" | "start" | "move" | null>(null);
-  const [moveDate, setMoveDate] = useState<string>(todayKey());
-  const [moveTime, setMoveTime] = useState<string>("");
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveDate, setMoveDate] = useState(todayKey());
+  const [moveTime, setMoveTime] = useState("");
   const [moveDuration, setMoveDuration] = useState<number | null>(null);
-  const [editItem, setEditItem] = useState<RitualItem | null>(null);
-  const [itemName, setItemName] = useState("");
-  const [itemHint, setItemHint] = useState("");
-  const [startDraft, setStartDraft] = useState<string>(todayKey());
 
   const date = search.date ?? todayKey();
-  const action = source.actions.find((a) => a.id === actionId) ?? null;
-  const schedule =
-    source.schedules.find((s) => s.id === search.scheduleId) ??
-    source.schedules.find((s) => s.action_id === actionId) ??
-    null;
-
+  const action = source.actions.find((item) => item.id === actionId) ?? null;
+  const schedules = source.schedules.filter(
+    (item) => item.action_id === actionId && item.status === "planned",
+  );
+  const schedule = schedules.find((item) => item.id === search.scheduleId) ?? schedules[0] ?? null;
   const { data: attachments = [] } = useQuery({
     queryKey: ["attachments", actionId],
     queryFn: () => fetchAttachments(actionId),
   });
-
   const items = source.ritualItems
-    .filter((i) => i.ritual_action_id === actionId)
+    .filter((item) => item.ritual_action_id === actionId)
     .slice()
-    .sort((a, b) => a.sort_order - b.sort_order);
-
-  const actionAreas = source.actionLifeAreas
-    .filter((l) => l.action_id === actionId)
-    .map((l) => areas.find((a) => a.id === l.life_area_id))
+    .sort((left, right) => left.sort_order - right.sort_order);
+  const actionAreaIds = source.actionLifeAreas
+    .filter((link) => link.action_id === actionId)
+    .map((link) => link.life_area_id);
+  const actionAreas = actionAreaIds
+    .map((areaId) => areas.find((area) => area.id === areaId))
     .filter((area): area is NonNullable<typeof area> => Boolean(area));
-
-  const goal = source.goals.find((g) => g.id === action?.goal_id) ?? null;
+  const goal = source.goals.find((item) => item.id === action?.goal_id) ?? null;
   const actionIsActive = !action?.goal_id || goal?.status === "active";
-
   const completed = source.completions.some(
-    (c) => c.schedule_id === schedule?.id && c.occurrence_date === date && c.status === "completed",
+    (item) =>
+      item.schedule_id === schedule?.id &&
+      item.occurrence_date === date &&
+      item.status === "completed",
   );
-
   const itemDone = (itemId: string) =>
     source.ritualItemCompletions.some(
-      (c) =>
-        c.ritual_item_id === itemId && c.schedule_id === schedule?.id && c.occurrence_date === date,
+      (item) =>
+        item.ritual_item_id === itemId &&
+        item.schedule_id === schedule?.id &&
+        item.occurrence_date === date,
     );
-
-  const doneCount = items.filter((i) => itemDone(i.id)).length;
+  const doneCount = items.filter((item) => itemDone(item.id)).length;
 
   const complete = usePlannerMutation(() =>
     markActionCompleted({ actionId, scheduleId: schedule!.id, date }),
   );
-
   const skip = usePlannerMutation(() =>
     markActionSkipped({ actionId, scheduleId: schedule!.id, date }),
   );
-
   const move = usePlannerMutation(() =>
     rescheduleAction({
       scheduleId: schedule!.id,
@@ -282,7 +160,6 @@ function ActionDetail() {
       durationSeconds: moveDuration,
     }),
   );
-
   const toggleItem = usePlannerMutation(async (input: { itemId: string; done: boolean }) => {
     await toggleRitualItem({
       ritualItemId: input.itemId,
@@ -290,31 +167,13 @@ function ActionDetail() {
       date,
       done: input.done,
     });
-    // Когда выполнены все пункты — ритуал становится выполненным.
     const nextDone = input.done ? doneCount + 1 : doneCount - 1;
     if (items.length && nextDone >= items.length && !completed) {
       await markActionCompleted({ actionId, scheduleId: schedule!.id, date });
     }
   });
-
-  const patch = usePlannerMutation((input: Parameters<typeof updateAction>[1]) =>
-    updateAction(actionId, input),
-  );
-
-  const patchSchedule = usePlannerMutation((input: Parameters<typeof updateSchedule>[1]) =>
-    updateSchedule(schedule!.id, input),
-  );
-
-  const patchItem = usePlannerMutation(
-    (input: { itemId: string; patch: Parameters<typeof updateRitualItem>[1] }) =>
-      updateRitualItem(input.itemId, input.patch),
-  );
-
-  const reorder = usePlannerMutation((ids: string[]) => reorderRitualItems(ids));
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+  const saveConfiguration = usePlannerMutation((values: ActionFormValues) =>
+    updateActionConfiguration(actionId, values),
   );
 
   if (isLoading) {
@@ -344,28 +203,62 @@ function ActionDetail() {
     );
   }
 
+  if (search.edit && actionIsActive) {
+    return (
+      <div className="app-screen min-h-dvh bg-background pb-28">
+        <ScreenHeader
+          onBack={() =>
+            navigate({
+              to: "/action/$actionId",
+              params: { actionId },
+              search: { date: search.date, scheduleId: search.scheduleId, edit: undefined },
+            })
+          }
+          eyebrow="Редактирование"
+          title={ACTION_FORMAT_NAME[action.type]}
+          subtitle={goal?.result_text ? `Моя цель: ${goal.result_text}` : undefined}
+        />
+        <main className="animate-rise page-gutter mx-auto w-full max-w-md pt-6">
+          <ActionForm
+            type={action.type}
+            areas={areas}
+            initial={{
+              name: action.name,
+              description: action.description,
+              durationSeconds: action.duration_seconds,
+              whyImportant: action.why_important,
+              startDate: action.start_date,
+              lifeAreaIds: actionAreaIds,
+              ritualItems: items,
+              attachments,
+              schedules,
+            }}
+            submitting={saveConfiguration.isPending}
+            onSubmit={(values) =>
+              saveConfiguration.mutate(values, {
+                onSuccess: () => {
+                  toast.success("Изменения сохранены");
+                  navigate({
+                    to: "/action/$actionId",
+                    params: { actionId },
+                    search: { date: search.date, scheduleId: search.scheduleId, edit: undefined },
+                  });
+                },
+                onError: (error) =>
+                  toast.error(
+                    error instanceof Error ? error.message : "Не удалось сохранить изменения",
+                  ),
+              })
+            }
+          />
+        </main>
+      </div>
+    );
+  }
+
   const durationSeconds = schedule?.duration_seconds ?? action.duration_seconds;
   const duration = formatDuration(durationSeconds);
   const time = formatTime(schedule?.start_time ?? null);
-
-  const savePatch =
-    (field: "name" | "description" | "why_important" | "helps_with") => (next: string) =>
-      patch.mutateAsync(
-        field === "name" ? { name: next || action.name } : { [field]: next || null },
-      );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const from = items.findIndex((i) => i.id === active.id);
-    const to = items.findIndex((i) => i.id === over.id);
-    if (from < 0 || to < 0) return;
-    const next = items.slice();
-    const [moved] = next.splice(from, 1);
-    if (!moved) return;
-    next.splice(to, 0, moved);
-    reorder.mutate(next.map((i) => i.id));
-  };
 
   return (
     <div className="app-screen min-h-dvh bg-background pb-28">
@@ -374,62 +267,45 @@ function ActionDetail() {
       <main className="animate-rise pt-2">
         <PageContainer className="space-y-8">
           <section className="space-y-3.5">
-            <div className="flex items-center gap-2">
-              <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>
-              {completed ? (
-                <Badge variant="default">
-                  <Check className="size-3.5" strokeWidth={2.25} aria-hidden />
-                  Выполнено
-                </Badge>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>
+                {completed ? (
+                  <Badge variant="default">
+                    <Check className="size-3.5" strokeWidth={2.25} aria-hidden />
+                    Выполнено
+                  </Badge>
+                ) : null}
+              </div>
+              {actionIsActive ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate({
+                      to: "/action/$actionId",
+                      params: { actionId },
+                      search: { date: search.date, scheduleId: search.scheduleId, edit: true },
+                    })
+                  }
+                  className="focus-ring inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-mid"
+                >
+                  <EditPencil className="size-4" aria-hidden />
+                  Изменить
+                </button>
               ) : null}
             </div>
 
-            <EditableSection
-              key={`name-${actionIsActive}`}
-              title="Название"
-              value={action.name}
-              placeholder="Название действия"
-              emptyText="Добавь название."
-              onSave={savePatch("name")}
-              saving={patch.isPending}
-              editable={actionIsActive}
-              multiline={false}
-              valueClassName="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]"
-            />
+            <h1 className="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]">
+              {action.name}
+            </h1>
 
             <div className="flex flex-wrap items-center gap-2">
-              {schedule ? (
-                <EditableChip
-                  icon={Clock}
-                  onClick={() => setSheet("time")}
-                  disabled={!actionIsActive}
-                >
-                  {time ?? "Время"}
-                </EditableChip>
-              ) : null}
-              <EditableChip
-                icon={Hourglass}
-                onClick={() => setSheet("duration")}
-                disabled={!actionIsActive}
-              >
-                {duration ?? "Длительность"}
-              </EditableChip>
-              <EditableChip
-                icon={Calendar}
-                disabled={!actionIsActive}
-                onClick={() => {
-                  setStartDraft(action.start_date);
-                  setSheet("start");
-                }}
-              >
+              {time ? <MetaChip icon={Clock}>{time}</MetaChip> : null}
+              {duration ? <MetaChip icon={Hourglass}>{duration}</MetaChip> : null}
+              <MetaChip icon={Calendar}>
                 с {formatDayShort(fromDateKey(action.start_date))}
-              </EditableChip>
-              {items.length ? (
-                <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/62 px-3.5 text-sm text-muted-foreground shadow-low backdrop-blur-2xl">
-                  <Layers className="size-3.5" strokeWidth={1.75} aria-hidden />
-                  {items.length} пункта
-                </span>
-              ) : null}
+              </MetaChip>
+              {items.length ? <MetaChip icon={Layers}>{items.length} пункта</MetaChip> : null}
             </div>
 
             {actionAreas.length ? (
@@ -441,96 +317,97 @@ function ActionDetail() {
             ) : null}
           </section>
 
-          <Divider />
-
           {goal ? (
-            <Section title="Результат">
-              <div className="rounded-[24px] border border-white/80 bg-white/70 px-4 py-3.5 shadow-mid backdrop-blur-2xl">
-                <p className="text-base leading-relaxed">{goal.result_text}</p>
-              </div>
-            </Section>
+            <>
+              <Divider />
+              <Section title="Моя цель">
+                <div className="rounded-[24px] border border-white/80 bg-white/70 px-4 py-3.5 shadow-mid backdrop-blur-2xl">
+                  <p className="text-base leading-relaxed">{goal.result_text}</p>
+                </div>
+              </Section>
+            </>
           ) : null}
 
-          <EditableSection
-            key={`description-${actionIsActive}`}
-            title="Что делать"
-            value={action.description ?? ""}
-            placeholder="Опиши, что именно нужно сделать"
-            emptyText="Добавь описание, чтобы не думать об этом в момент выполнения."
-            onSave={savePatch("description")}
-            saving={patch.isPending}
-            editable={actionIsActive}
-          >
-            {items.length ? (
-              <div className="mt-3 overflow-hidden rounded-[26px] border border-white/80 bg-white/64 shadow-mid backdrop-blur-2xl">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  modifiers={[restrictToVerticalAxis]}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={items.map((i) => i.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {items.map((item) => (
-                      <RitualItemRow
+          {action.description ? (
+            <>
+              <Divider />
+              <Section title="Описание">
+                <p className="text-base leading-relaxed">{action.description}</p>
+              </Section>
+            </>
+          ) : null}
+
+          {items.length ? (
+            <>
+              <Divider />
+              <Section title="Ритуал">
+                <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/64 shadow-mid backdrop-blur-2xl">
+                  {items.map((item) => {
+                    const done = itemDone(item.id);
+                    return (
+                      <div
                         key={item.id}
-                        item={item}
-                        done={itemDone(item.id)}
-                        disabled={!schedule || !actionIsActive}
-                        readOnly={!actionIsActive}
-                        onToggle={() =>
-                          toggleItem.mutate({ itemId: item.id, done: !itemDone(item.id) })
-                        }
-                        onEdit={() => {
-                          setEditItem(item);
-                          setItemName(item.name);
-                          setItemHint(item.description ?? "");
-                        }}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              </div>
-            ) : null}
-          </EditableSection>
+                        className="flex items-start gap-2 border-b border-white/75 px-3 last:border-b-0"
+                      >
+                        <button
+                          type="button"
+                          disabled={!schedule || !actionIsActive}
+                          onClick={() => toggleItem.mutate({ itemId: item.id, done: !done })}
+                          aria-label={done ? "Снять отметку" : "Отметить пункт"}
+                          className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-xl"
+                        >
+                          <span
+                            className={cn(
+                              "flex size-5 items-center justify-center rounded-full",
+                              done
+                                ? "bg-primary text-primary-foreground"
+                                : "border border-border bg-secondary",
+                            )}
+                          >
+                            {done ? <Check className="size-3.5" strokeWidth={2.5} /> : null}
+                          </span>
+                        </button>
+                        <div className="min-w-0 flex-1 py-3">
+                          <p
+                            className={cn(
+                              "text-base",
+                              done && "text-muted-foreground line-through",
+                            )}
+                          >
+                            {item.name}
+                          </p>
+                          {item.description ? (
+                            <p className="mt-0.5 text-sm text-muted-foreground">
+                              {item.description}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            </>
+          ) : null}
 
-          <Divider />
-
-          <EditableSection
-            key={`why-${actionIsActive}`}
-            title="Почему это важно"
-            value={action.why_important ?? ""}
-            placeholder="Например, так я забочусь о себе"
-            emptyText="Добавь личный смысл — это помогает возвращаться к действию."
-            onSave={savePatch("why_important")}
-            saving={patch.isPending}
-            editable={actionIsActive}
-          />
-
-          <Divider />
-
-          <EditableSection
-            key={`helps-${actionIsActive}`}
-            title="Как это ведёт к результату"
-            value={action.helps_with ?? ""}
-            placeholder="Опиши связь между действием и желаемым результатом"
-            emptyText="Опиши, как это действие приближает тебя к результату."
-            onSave={savePatch("helps_with")}
-            saving={patch.isPending}
-            editable={actionIsActive}
-          />
+          {action.why_important ? (
+            <>
+              <Divider />
+              <Section title="Почему это важно">
+                <p className="text-base leading-relaxed">{action.why_important}</p>
+              </Section>
+            </>
+          ) : null}
 
           {attachments.length ? (
             <>
               <Divider />
               <Section title="Материалы">
                 <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/68 shadow-mid backdrop-blur-2xl">
-                  {attachments.map((att, index) => (
+                  {attachments.map((attachment, index) => (
                     <a
-                      key={att.id}
-                      href={att.url}
+                      key={attachment.id}
+                      href={attachment.url}
                       target="_blank"
                       rel="noreferrer"
                       className={cn(
@@ -538,11 +415,10 @@ function ActionDetail() {
                         index > 0 && "border-t border-border/70",
                       )}
                     >
-                      <span className="min-w-0 truncate text-base">{att.title || att.url}</span>
-                      <ExternalLink
-                        className="size-4 shrink-0 text-muted-foreground"
-                        strokeWidth={1.75}
-                      />
+                      <span className="min-w-0 truncate text-base">
+                        {attachment.title || attachment.url}
+                      </span>
+                      <ExternalLink className="size-4 shrink-0 text-muted-foreground" />
                     </a>
                   ))}
                 </div>
@@ -589,7 +465,7 @@ function ActionDetail() {
                     setMoveDate(date);
                     setMoveTime(schedule.start_time?.slice(0, 5) ?? "");
                     setMoveDuration(durationSeconds);
-                    setSheet("move");
+                    setMoveOpen(true);
                   }}
                 />
                 {items.length ? (
@@ -608,53 +484,12 @@ function ActionDetail() {
         </PageContainer>
       </main>
 
-      {/* Время начала */}
-      <TimeSheet
-        open={actionIsActive && sheet === "time"}
-        value={schedule?.start_time ?? null}
-        onCancel={() => setSheet(null)}
-        onSubmit={(next) => {
-          setSheet(null);
-          patchSchedule.mutate({ start_time: next });
-        }}
-      />
-
-      {/* Продолжительность */}
-      <DurationSheet
-        open={actionIsActive && sheet === "duration"}
-        seconds={durationSeconds}
-        onCancel={() => setSheet(null)}
-        onSubmit={(next) => {
-          setSheet(null);
-          if (schedule) patchSchedule.mutate({ duration_seconds: next });
-          else patch.mutate({ duration_seconds: next });
-        }}
-      />
-
-      {/* Дата начала */}
       <PickerSheet
-        open={actionIsActive && sheet === "start"}
-        onCancel={() => setSheet(null)}
-        onSubmit={() => {
-          setSheet(null);
-          patch.mutate({ start_date: startDraft });
-        }}
-      >
-        <p className="pb-3 text-base font-semibold">Дата начала</p>
-        <DayPicker
-          value={[startDraft]}
-          onChange={(next) => setStartDraft(next[0] ?? startDraft)}
-          multiple={false}
-        />
-      </PickerSheet>
-
-      {/* Перенос действия */}
-      <PickerSheet
-        open={actionIsActive && sheet === "move"}
-        onCancel={() => setSheet(null)}
+        open={actionIsActive && moveOpen}
+        onCancel={() => setMoveOpen(false)}
         submitLabel="Перенести"
         onSubmit={() => {
-          setSheet(null);
+          setMoveOpen(false);
           move.mutate(undefined as never, {
             onSuccess: () => {
               toast.success("Перенесено");
@@ -672,7 +507,11 @@ function ActionDetail() {
           />
           <label className="block space-y-1.5">
             <span className="text-sm text-muted-foreground">Время</span>
-            <Input type="time" value={moveTime} onChange={(e) => setMoveTime(e.target.value)} />
+            <Input
+              type="time"
+              value={moveTime}
+              onChange={(event) => setMoveTime(event.target.value)}
+            />
           </label>
           <div className="space-y-1.5">
             <span className="text-sm text-muted-foreground">Продолжительность</span>
@@ -681,47 +520,14 @@ function ActionDetail() {
               minutes={Math.floor(((moveDuration ?? 0) % 3600) / 60)}
               seconds={(moveDuration ?? 0) % 60}
               onChange={(next) => {
-                const h = next.hours ?? Math.floor((moveDuration ?? 0) / 3600);
-                const m = next.minutes ?? Math.floor(((moveDuration ?? 0) % 3600) / 60);
-                const sec = next.seconds ?? (moveDuration ?? 0) % 60;
-                const total = h * 3600 + m * 60 + sec;
+                const hours = next.hours ?? Math.floor((moveDuration ?? 0) / 3600);
+                const minutes = next.minutes ?? Math.floor(((moveDuration ?? 0) % 3600) / 60);
+                const seconds = next.seconds ?? (moveDuration ?? 0) % 60;
+                const total = hours * 3600 + minutes * 60 + seconds;
                 setMoveDuration(total > 0 ? total : null);
               }}
             />
           </div>
-        </div>
-      </PickerSheet>
-
-      {/* Пункт ритуала */}
-      <PickerSheet
-        open={actionIsActive && Boolean(editItem)}
-        onCancel={() => setEditItem(null)}
-        submitLabel="Сохранить"
-        onSubmit={() => {
-          const target = editItem;
-          setEditItem(null);
-          if (!target) return;
-          patchItem.mutate({
-            itemId: target.id,
-            patch: {
-              name: itemName.trim() || target.name,
-              description: itemHint.trim() || null,
-            },
-          });
-        }}
-      >
-        <p className="pb-3 text-base font-semibold">Пункт ритуала</p>
-        <div className="space-y-2">
-          <Input
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            placeholder="Название"
-          />
-          <Input
-            value={itemHint}
-            onChange={(e) => setItemHint(e.target.value)}
-            placeholder="Короткая подсказка (необязательно)"
-          />
         </div>
       </PickerSheet>
     </div>
