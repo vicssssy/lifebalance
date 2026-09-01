@@ -75,7 +75,13 @@ export function PrimaryButton({
   type?: "button" | "submit";
 }) {
   return (
-    <Button type={type} onClick={onClick} disabled={disabled ?? false} loading={loading ?? false} size="lg">
+    <Button
+      type={type}
+      onClick={onClick}
+      disabled={disabled ?? false}
+      loading={loading ?? false}
+      size="lg"
+    >
       {children}
     </Button>
   );

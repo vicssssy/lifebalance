@@ -66,7 +66,10 @@ export const WEEKDAYS: { value: number; short: string }[] = [
 
 export const REFLECTION_QUESTIONS = [
   { field: "real_result", question: "Какой реальный результат ты получила?" },
-  { field: "effective_actions", question: "Какие действия реально привели тебя к этому результату?" },
+  {
+    field: "effective_actions",
+    question: "Какие действия реально привели тебя к этому результату?",
+  },
   { field: "obstacles", question: "Что помешало тебе сделать то, что ты планировала?" },
   { field: "system_change", question: "Что тебе нужно изменить в своей системе?" },
   { field: "next_experiment", question: "Какое одно изменение ты проверишь в следующем месяце?" },

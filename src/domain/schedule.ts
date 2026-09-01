@@ -17,7 +17,6 @@ export function fromDateKey(key: string): Date {
   return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 }
 
-
 /** ISO-день недели: понедельник = 1, воскресенье = 7. */
 export function isoWeekday(date: Date): number {
   const day = date.getDay();
