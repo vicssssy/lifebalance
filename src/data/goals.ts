@@ -9,16 +9,22 @@ export async function createGoal(input: {
   userId?: string;
   lifeAreaId: string;
   resultText: string;
+  whyImportant: string | null;
 }): Promise<Goal> {
   return mutateCloudWorkspace<Goal>({
     type: "createGoal",
     lifeAreaId: input.lifeAreaId,
     resultText: input.resultText,
+    whyImportant: input.whyImportant,
   });
 }
 
-export async function updateGoalResult(goalId: string, resultText: string): Promise<void> {
-  await mutateCloudWorkspace({ type: "updateGoalResult", goalId, resultText });
+export async function updateGoal(
+  goalId: string,
+  resultText: string,
+  whyImportant: string | null,
+): Promise<void> {
+  await mutateCloudWorkspace({ type: "updateGoal", goalId, resultText, whyImportant });
 }
 
 export async function setGoalStatus(

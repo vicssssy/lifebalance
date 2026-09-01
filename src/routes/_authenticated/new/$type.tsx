@@ -27,7 +27,6 @@ export const Route = createFileRoute("/_authenticated/new/$type")({
     lifeAreaId: String(search["lifeAreaId"] ?? ""),
     goalId: search["goalId"] ? String(search["goalId"]) : undefined,
     resultText: String(search["resultText"] ?? ""),
-    helpsWith: search["helpsWith"] ? String(search["helpsWith"]) : undefined,
   }),
   head: ({ params }) => {
     const name = ACTION_FORMAT_NAME[params.type as ActionType] ?? "Новое действие";
@@ -97,14 +96,18 @@ function CreateAction() {
       goalId: search.goalId ?? null,
       newGoal:
         !search.goalId && search.resultText && search.lifeAreaId
-          ? { lifeAreaId: search.lifeAreaId, resultText: search.resultText }
+          ? {
+              lifeAreaId: search.lifeAreaId,
+              resultText: search.resultText,
+              whyImportant: null,
+            }
           : null,
       name: name.trim(),
       type,
       description: description.trim() || null,
       durationSeconds,
       whyImportant: whyImportant.trim() || null,
-      helpsWith: search.helpsWith ?? null,
+      helpsWith: null,
       startDate,
       lifeAreaIds,
       ritualItems:
@@ -141,7 +144,7 @@ function CreateAction() {
         onBack={() => navigate({ to: "/new" })}
         eyebrow="Настройка действия"
         title={ACTION_FORMAT_NAME[type]}
-        subtitle={search.resultText ? `Результат: ${search.resultText}` : undefined}
+        subtitle={search.resultText ? `Цель: ${search.resultText}` : undefined}
       />
 
       <main className="animate-rise page-gutter mx-auto w-full max-w-md space-y-6 pt-6">

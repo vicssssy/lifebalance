@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { CheckSquare, Clock, NavArrowRight, Repeat, Sparks, TaskList } from "iconoir-react";
+import { toast } from "sonner";
 import { ACTION_FORMATS, type ActionType } from "@/domain/constants";
-import { useGoals, useLifeAreas } from "@/hooks/useAppData";
+import { createGoal, updateGoal } from "@/data/goals";
+import { useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StickyActions } from "@/components/StickyActions";
@@ -24,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/new/")({
   component: NewFlow,
 });
 
-type Step = "area" | "result" | "helps" | "format";
+type Step = "area" | "goal" | "format";
 
 const FORMAT_ICON: Record<ActionType, AppIcon> = {
   ritual: Sparks,
@@ -37,48 +39,53 @@ const FORMAT_ICON: Record<ActionType, AppIcon> = {
 function NewFlow() {
   const navigate = useNavigate();
   const { data: areas = [] } = useLifeAreas();
-  const { data: goals = [] } = useGoals();
 
   const [step, setStep] = useState<Step>("area");
   const [lifeAreaId, setLifeAreaId] = useState<string | null>(null);
   const [goalId, setGoalId] = useState<string | null>(null);
   const [resultText, setResultText] = useState("");
-  const [helpsWith, setHelpsWith] = useState("");
+  const [goalWhyImportant, setGoalWhyImportant] = useState("");
 
   const area = areas.find((a) => a.id === lifeAreaId) ?? null;
-  const areaGoals = goals.filter((g) => g.life_area_id === lifeAreaId && g.status === "active");
+
+  const saveGoal = usePlannerMutation(
+    async (draft: {
+      goalId: string | null;
+      lifeAreaId: string;
+      resultText: string;
+      whyImportant: string | null;
+    }) => {
+      if (draft.goalId) {
+        await updateGoal(draft.goalId, draft.resultText, draft.whyImportant);
+        return draft.goalId;
+      }
+      const goal = await createGoal(draft);
+      return goal.id;
+    },
+  );
 
   function back() {
     if (step === "area") navigate({ to: "/today" });
-    else if (step === "result") setStep("area");
-    else if (step === "helps") setStep("result");
-    else setStep("helps");
+    else if (step === "goal") setStep("area");
+    else setStep("goal");
   }
 
-  const stepIndex = { area: 1, result: 2, helps: 3, format: 4 }[step];
+  const stepIndex = { area: 1, goal: 2, format: 3 }[step];
 
   return (
     <div className="app-screen min-h-dvh bg-background pb-28">
       <ScreenHeader
         onBack={back}
-        steps={{ total: 4, current: stepIndex }}
+        steps={{ total: 3, current: stepIndex }}
         eyebrow={area ? <LifeAreaCategoryLink area={area} /> : "Новое действие"}
         title={
           step === "area"
-            ? "Какую сферу жизни ты хочешь изменить?"
-            : step === "result"
-              ? "Какой результат ты хочешь получить?"
-              : step === "helps"
-                ? "Что поможет тебе прийти к этому результату?"
-                : "В каком формате ты это сделаешь?"
+            ? "Выбери сферу жизни, в которой тебе сейчас важны изменения"
+            : step === "goal"
+              ? "Твоя цель"
+              : "Выбери действие, которое поможет прийти к твоей цели"
         }
-        subtitle={
-          step === "result"
-            ? area?.description
-            : step === "helps"
-              ? "Опиши своими словами. Дальше ты выберешь, в каком формате это делать."
-              : undefined
-        }
+        subtitle={step === "goal" ? area?.description : undefined}
       />
 
       <main key={step} className="animate-rise page-gutter mx-auto w-full max-w-md space-y-6 pt-6">
@@ -93,7 +100,8 @@ function NewFlow() {
                     setLifeAreaId(a.id);
                     setGoalId(null);
                     setResultText("");
-                    setStep("result");
+                    setGoalWhyImportant("");
+                    setStep("goal");
                   }}
                   className="row-card row-card-press w-full px-4 py-4 text-left"
                 >
@@ -105,61 +113,55 @@ function NewFlow() {
           </>
         ) : null}
 
-        {step === "result" && area ? (
+        {step === "goal" && area ? (
           <>
-            {areaGoals.length ? (
-              <Field label="Уже сформулированные результаты">
-                <div className="space-y-2">
-                  {areaGoals.map((goal) => (
-                    <button
-                      key={goal.id}
-                      type="button"
-                      onClick={() => {
-                        setGoalId(goal.id);
-                        setResultText(goal.result_text);
-                        setStep("helps");
-                      }}
-                      className="row-card row-card-press block w-full px-4 py-3 text-left text-base"
-                    >
-                      {goal.result_text}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-            ) : null}
-
-            <Field label="Новый результат">
+            <Field label="Какой цели ты хочешь достичь?">
               <TextField
-                value={goalId ? "" : resultText}
-                onChange={(value) => {
-                  setGoalId(null);
-                  setResultText(value);
-                }}
+                value={resultText}
+                onChange={setResultText}
                 placeholder="Например, я чувствую себя энергичной по утрам"
                 multiline
               />
             </Field>
 
+            <Field label="Почему для тебя это важно?">
+              <TextField
+                value={goalWhyImportant}
+                onChange={setGoalWhyImportant}
+                placeholder="Например, я хочу начинать день с силами и ясностью"
+                multiline
+              />
+            </Field>
+
             <StickyActions
-              hint={resultText.trim() ? undefined : "Сформулируй результат, чтобы продолжить"}
+              hint={resultText.trim() ? undefined : "Сформулируй цель, чтобы продолжить"}
             >
-              <PrimaryButton onClick={() => setStep("helps")} disabled={!resultText.trim()}>
+              <PrimaryButton
+                onClick={() =>
+                  saveGoal.mutate(
+                    {
+                      goalId,
+                      lifeAreaId: area.id,
+                      resultText: resultText.trim(),
+                      whyImportant: goalWhyImportant.trim() || null,
+                    },
+                    {
+                      onSuccess: (savedGoalId) => {
+                        setGoalId(savedGoalId);
+                        setStep("format");
+                      },
+                      onError: (error) =>
+                        toast.error(
+                          error instanceof Error ? error.message : "Не удалось сохранить цель",
+                        ),
+                    },
+                  )
+                }
+                disabled={!resultText.trim() || saveGoal.isPending}
+                loading={saveGoal.isPending}
+              >
                 Далее
               </PrimaryButton>
-            </StickyActions>
-          </>
-        ) : null}
-
-        {step === "helps" ? (
-          <>
-            <TextField
-              value={helpsWith}
-              onChange={setHelpsWith}
-              placeholder="Например, спокойное утро без спешки"
-              multiline
-            />
-            <StickyActions>
-              <PrimaryButton onClick={() => setStep("format")}>Далее</PrimaryButton>
             </StickyActions>
           </>
         ) : null}
@@ -181,7 +183,6 @@ function NewFlow() {
                           lifeAreaId: lifeAreaId ?? "",
                           goalId: goalId ?? undefined,
                           resultText: resultText.trim(),
-                          helpsWith: helpsWith.trim() || undefined,
                         },
                       })
                     }

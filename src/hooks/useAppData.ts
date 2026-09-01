@@ -54,7 +54,7 @@ export function usePlannerSource() {
 }
 
 /** Мутация, после которой достаточно обновить единый D1 workspace. */
-export function usePlannerMutation<TInput>(fn: (input: TInput) => Promise<unknown>) {
+export function usePlannerMutation<TInput, TResult>(fn: (input: TInput) => Promise<TResult>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,

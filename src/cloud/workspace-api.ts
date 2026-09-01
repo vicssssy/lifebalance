@@ -83,6 +83,7 @@ const goalSchema = z.object({
   id,
   life_area_id: id,
   result_text: z.string().min(1).max(4_000),
+  why_important: nullableText().optional().default(null),
   status: goalStatus,
   created_at: z.string().min(1).max(100),
   completed_at: nullableText(100),
@@ -156,7 +157,11 @@ const ritualPatchSchema = z
 const actionDraftSchema = z.object({
   goalId: id.nullable(),
   newGoal: z
-    .object({ lifeAreaId: id, resultText: z.string().min(1).max(4_000) })
+    .object({
+      lifeAreaId: id,
+      resultText: z.string().min(1).max(4_000),
+      whyImportant: nullableText(),
+    })
     .nullable()
     .optional(),
   name: z.string().min(1).max(500),
@@ -203,11 +208,13 @@ const operationSchema = z.discriminatedUnion("type", [
     type: z.literal("createGoal"),
     lifeAreaId: id,
     resultText: z.string().min(1).max(4_000),
+    whyImportant: nullableText(),
   }),
   z.object({
-    type: z.literal("updateGoalResult"),
+    type: z.literal("updateGoal"),
     goalId: id,
     resultText: z.string().min(1).max(4_000),
+    whyImportant: nullableText(),
   }),
   z.object({ type: z.literal("setGoalStatus"), goalId: id, status: goalStatus, closedOn: dateKey }),
   z.object({ type: z.literal("createAction"), draft: actionDraftSchema }),
@@ -333,13 +340,14 @@ function snapshotStatements(
     statements.push(
       db
         .prepare(
-          "INSERT INTO goals (id, workspace_id, life_area_id, result_text, status, created_at, completed_at, archived_at, closed_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO goals (id, workspace_id, life_area_id, result_text, why_important, status, created_at, completed_at, archived_at, closed_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           goal.id,
           workspaceId,
           goal.life_area_id,
           goal.result_text,
+          goal.why_important,
           goal.status,
           goal.created_at,
           goal.completed_at,
@@ -531,7 +539,7 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
     ),
     db
       .prepare(
-        "SELECT id, life_area_id, result_text, status, created_at, completed_at, archived_at, closed_on FROM goals WHERE workspace_id = ? ORDER BY created_at DESC",
+        "SELECT id, life_area_id, result_text, why_important, status, created_at, completed_at, archived_at, closed_on FROM goals WHERE workspace_id = ? ORDER BY created_at DESC",
       )
       .bind(workspaceId),
     db
@@ -641,6 +649,7 @@ async function mutate(
         id: crypto.randomUUID(),
         life_area_id: operation.lifeAreaId,
         result_text: operation.resultText.trim(),
+        why_important: operation.whyImportant,
         status: "active",
         created_at: now,
         completed_at: null,
@@ -649,17 +658,26 @@ async function mutate(
       };
       await db
         .prepare(
-          "INSERT INTO goals (id, workspace_id, life_area_id, result_text, status, created_at, completed_at, archived_at, closed_on) VALUES (?, ?, ?, ?, 'active', ?, NULL, NULL, NULL)",
+          "INSERT INTO goals (id, workspace_id, life_area_id, result_text, why_important, status, created_at, completed_at, archived_at, closed_on) VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, NULL)",
         )
-        .bind(goal.id, workspaceId, goal.life_area_id, goal.result_text, goal.created_at)
+        .bind(
+          goal.id,
+          workspaceId,
+          goal.life_area_id,
+          goal.result_text,
+          goal.why_important,
+          goal.created_at,
+        )
         .run();
       return goal;
     }
-    case "updateGoalResult":
+    case "updateGoal":
       await assertOwned(db, "goals", "id", operation.goalId, workspaceId);
       await db
-        .prepare("UPDATE goals SET result_text = ? WHERE id = ? AND workspace_id = ?")
-        .bind(operation.resultText.trim(), operation.goalId, workspaceId)
+        .prepare(
+          "UPDATE goals SET result_text = ?, why_important = ? WHERE id = ? AND workspace_id = ?",
+        )
+        .bind(operation.resultText.trim(), operation.whyImportant, operation.goalId, workspaceId)
         .run();
       return null;
     case "setGoalStatus":
@@ -686,6 +704,7 @@ async function mutate(
               id: crypto.randomUUID(),
               life_area_id: draft.newGoal.lifeAreaId,
               result_text: draft.newGoal.resultText.trim(),
+              why_important: draft.newGoal.whyImportant,
               status: "active",
               created_at: now,
               completed_at: null,
@@ -712,9 +731,16 @@ async function mutate(
         statements.push(
           db
             .prepare(
-              "INSERT INTO goals (id, workspace_id, life_area_id, result_text, status, created_at, completed_at, archived_at, closed_on) VALUES (?, ?, ?, ?, 'active', ?, NULL, NULL, NULL)",
+              "INSERT INTO goals (id, workspace_id, life_area_id, result_text, why_important, status, created_at, completed_at, archived_at, closed_on) VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, NULL)",
             )
-            .bind(goal.id, workspaceId, goal.life_area_id, goal.result_text, goal.created_at),
+            .bind(
+              goal.id,
+              workspaceId,
+              goal.life_area_id,
+              goal.result_text,
+              goal.why_important,
+              goal.created_at,
+            ),
         );
       }
       statements.push(

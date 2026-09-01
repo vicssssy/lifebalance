@@ -13,6 +13,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       life_area_id: "inner_state",
       result_text:
         "Я начинаю утро спокойно, сохраняю внимание на себе и вхожу в день без тревоги и автоматической проверки телефона",
+      why_important: "Так я начинаю день с ясностью, спокойствием и вниманием к себе.",
       status: "active",
       created_at: createdAt,
       completed_at: null,
@@ -24,6 +25,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       life_area_id: "personal_growth",
       result_text:
         "Я лучше замечаю свои внутренние опоры, понимаю, что помогает мне сохранять равновесие, и регулярно закрепляю работающие привычки",
+      why_important: "Это помогает мне сохранять устойчивость и поддерживать себя каждый день.",
       status: "active",
       created_at: createdAt,
       completed_at: null,
@@ -35,6 +37,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       life_area_id: "body_health",
       result_text:
         "Я системно забочусь о здоровье, прохожу профилактические проверки вовремя и принимаю решения на основе актуальной информации",
+      why_important: "Мне важно заботиться о здоровье заранее и чувствовать уверенность.",
       status: "active",
       created_at: createdAt,
       completed_at: null,
@@ -46,6 +49,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       life_area_id: "career",
       result_text:
         "Я каждую неделю продвигаю главный профессиональный результат через защищённые периоды глубокой работы без уведомлений и переключений",
+      why_important: "Так я двигаюсь вперёд без перегрузки и постоянных переключений.",
       status: "active",
       created_at: createdAt,
       completed_at: null,
@@ -57,6 +61,7 @@ export function createLocalPreviewGoals(date: string): Goal[] {
       life_area_id: "money",
       result_text:
         "Я выбираю новое жильё в пределах устойчивого бюджета, понимаю реальные расходы и принимаю решение без финансовой неопределённости",
+      why_important: "Мне нужны финансовая устойчивость и спокойствие при выборе нового дома.",
       status: "active",
       created_at: createdAt,
       completed_at: null,

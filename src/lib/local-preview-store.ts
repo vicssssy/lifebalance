@@ -47,6 +47,7 @@ export type LocalPreviewRitualItemPatch = Partial<
 export interface LocalPreviewGoalDraft {
   lifeAreaId: string;
   resultText: string;
+  whyImportant: string | null;
 }
 
 export interface LocalPreviewActionDraft {
@@ -210,6 +211,7 @@ function isGoal(value: unknown): boolean {
     typeof value["id"] === "string" &&
     typeof value["life_area_id"] === "string" &&
     typeof value["result_text"] === "string" &&
+    (value["why_important"] === undefined || isNullableString(value["why_important"])) &&
     ["active", "completed", "cancelled"].includes(String(value["status"])) &&
     typeof value["created_at"] === "string" &&
     isNullableString(value["completed_at"]) &&
@@ -231,7 +233,11 @@ function normalizeGoal(value: Record<string, unknown>, fallbackDate: string): Go
           localDateKeyFromTimestamp(value["archived_at"]) ??
           fallbackDate);
 
-  return { ...value, closed_on: closedOn } as unknown as Goal;
+  return {
+    ...value,
+    why_important: isNullableString(value["why_important"]) ? value["why_important"] : null,
+    closed_on: closedOn,
+  } as unknown as Goal;
 }
 
 function isReflection(value: unknown): boolean {
@@ -465,6 +471,7 @@ export async function createLocalPreviewGoal(
     id: localId("goal"),
     life_area_id: draft.lifeAreaId,
     result_text: draft.resultText.trim(),
+    why_important: draft.whyImportant,
     status: "active",
     created_at: new Date().toISOString(),
     completed_at: null,
@@ -486,6 +493,7 @@ export async function createLocalPreviewAction(
           id: localId("goal"),
           life_area_id: draft.newGoal.lifeAreaId,
           result_text: draft.newGoal.resultText.trim(),
+          why_important: draft.newGoal.whyImportant,
           status: "active" as const,
           created_at: createdAt,
           completed_at: null,

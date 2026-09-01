@@ -27,7 +27,7 @@ export interface LegacyWorkspaceSnapshot {
 
 export interface CloudActionDraft {
   goalId: string | null;
-  newGoal?: { lifeAreaId: string; resultText: string } | null;
+  newGoal?: { lifeAreaId: string; resultText: string; whyImportant: string | null } | null;
   name: string;
   type: Action["type"];
   description: string | null;
@@ -51,8 +51,13 @@ export interface CloudActionDraft {
 }
 
 export type CloudWorkspaceOperation =
-  | { type: "createGoal"; lifeAreaId: string; resultText: string }
-  | { type: "updateGoalResult"; goalId: string; resultText: string }
+  | {
+      type: "createGoal";
+      lifeAreaId: string;
+      resultText: string;
+      whyImportant: string | null;
+    }
+  | { type: "updateGoal"; goalId: string; resultText: string; whyImportant: string | null }
   | { type: "setGoalStatus"; goalId: string; status: Goal["status"]; closedOn: string }
   | { type: "createAction"; draft: CloudActionDraft }
   | {

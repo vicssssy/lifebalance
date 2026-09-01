@@ -14,6 +14,7 @@ export interface Goal {
   id: string;
   life_area_id: string;
   result_text: string;
+  why_important: string | null;
   status: GoalStatus;
   created_at: string;
   completed_at: string | null;
