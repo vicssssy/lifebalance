@@ -159,21 +159,24 @@ function GoalsScreen() {
                   .map((goal) => {
                     const actions = source.actions.filter((a) => a.goal_id === goal.id);
                     return (
-                      <div key={goal.id} className="relative px-1 py-1">
+                      <div
+                        key={goal.id}
+                        className="content-surface relative overflow-hidden rounded-[30px] px-3 py-4"
+                      >
                         <span
-                          className="absolute bottom-9 left-5 top-9 w-px bg-primary/20"
+                          className="absolute bottom-12 left-8 top-12 w-px bg-primary/16"
                           aria-hidden
                         />
 
                         <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
                           <span
-                            className="z-10 flex size-10 items-center justify-center rounded-full border border-primary/25 bg-background text-primary shadow-low"
+                            className="z-10 flex size-10 items-center justify-center rounded-[16px] border border-white/85 bg-secondary text-primary shadow-low"
                             aria-hidden
                           >
                             <Trophy className="size-[18px]" strokeWidth={1.8} />
                           </span>
                           <div className="min-w-0 pb-4 pt-0.5">
-                            <p className="text-[12px] font-medium leading-none text-muted-foreground">
+                            <p className="text-[12px] font-semibold leading-none text-muted-foreground">
                               {goal.status === "completed"
                                 ? "✓ Результат достигнут"
                                 : goal.status === "cancelled"
@@ -196,7 +199,7 @@ function GoalsScreen() {
                                   className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3"
                                 >
                                   <span
-                                    className="z-10 mt-3 flex size-10 items-center justify-center rounded-full border border-primary/30 bg-background text-primary shadow-low"
+                                    className="z-10 mt-3 flex size-10 items-center justify-center rounded-[16px] border border-white/85 bg-white text-primary shadow-low"
                                     aria-hidden
                                   >
                                     <ActionIcon className="size-[18px]" strokeWidth={1.75} />
@@ -209,7 +212,7 @@ function GoalsScreen() {
                                       scheduleId: undefined,
                                       edit: undefined,
                                     }}
-                                    className="focus-ring group/action flex min-h-20 min-w-0 items-start gap-2 border-t border-white/85 py-3 pl-0.5 pr-1 transition-colors duration-200 hover:text-primary"
+                                    className="focus-ring group/action flex min-h-20 min-w-0 items-start gap-2 border-t border-border/55 py-3 pl-0.5 pr-1 transition-colors duration-200 hover:text-primary"
                                   >
                                     <span className="min-w-0 flex-1">
                                       <span className="block text-[12px] font-medium leading-none text-muted-foreground">
@@ -238,12 +241,12 @@ function GoalsScreen() {
                         ) : (
                           <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
                             <span
-                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-full border border-primary/30 bg-background text-primary shadow-low"
+                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-[16px] border border-white/85 bg-white text-primary shadow-low"
                               aria-hidden
                             >
                               <TaskList className="size-[18px]" strokeWidth={1.75} />
                             </span>
-                            <p className="min-w-0 border-t border-white/85 py-4 text-sm leading-snug text-muted-foreground">
+                            <p className="min-w-0 border-t border-border/55 py-4 text-sm leading-snug text-muted-foreground">
                               Пока нет действий, ведущих к этому результату.
                             </p>
                           </div>
@@ -252,16 +255,16 @@ function GoalsScreen() {
                         {goal.status === "active" ? (
                           <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
                             <span
-                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_26px_rgb(96_71_232_/_0.28)]"
+                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-[16px] bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_26px_rgb(83_62_224_/_0.28)]"
                               aria-hidden
                             >
                               <Check className="size-[18px]" strokeWidth={2.25} />
                             </span>
-                            <div className="space-y-1 border-t border-white/85 pt-2.5">
+                            <div className="space-y-1 border-t border-border/55 pt-2.5">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="w-full justify-start rounded-2xl px-2 text-primary hover:bg-white/60"
+                                className="w-full justify-start rounded-2xl px-3 text-primary hover:bg-secondary/70"
                                 loading={closeGoal.isPending}
                                 onClick={() =>
                                   closeGoal.mutate(
@@ -277,7 +280,7 @@ function GoalsScreen() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="w-full justify-start rounded-2xl px-2 text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                                className="w-full justify-start rounded-2xl px-3 text-muted-foreground hover:bg-white/85 hover:text-destructive"
                                 disabled={closeGoal.isPending}
                                 onClick={() =>
                                   closeGoal.mutate(

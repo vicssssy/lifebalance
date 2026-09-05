@@ -201,7 +201,7 @@ export function ActionForm({
             {items.map((item, index) => (
               <div
                 key={item.id ?? `new-${index}`}
-                className="space-y-2 rounded-[26px] border border-white/80 bg-white/70 p-3 shadow-mid backdrop-blur-2xl"
+                className="content-surface space-y-2 rounded-[26px] p-3"
               >
                 <div className="flex items-center gap-2">
                   <input
@@ -214,7 +214,7 @@ export function ActionForm({
                       )
                     }
                     placeholder="Например, стакан воды"
-                    className="flex-1 rounded-[18px] border border-white/85 bg-white/68 px-3 py-2.5 text-base shadow-low focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
+                    className="flex-1 rounded-[18px] border border-border/75 bg-white/92 px-3 py-2.5 text-base shadow-low focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
                   />
                   <button
                     type="button"
@@ -235,14 +235,14 @@ export function ActionForm({
                     )
                   }
                   placeholder="Описание, если нужно"
-                  className="w-full rounded-[18px] border border-white/85 bg-white/68 px-3 py-2.5 text-base shadow-low focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
+                  className="w-full rounded-[18px] border border-border/75 bg-white/92 px-3 py-2.5 text-base shadow-low focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
                 />
               </div>
             ))}
             <button
               type="button"
               onClick={() => setItems((current) => [...current, { name: "", description: "" }])}
-              className="focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/58 px-3.5 text-base font-semibold text-primary shadow-low backdrop-blur-2xl"
+              className="control-glass focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-base font-semibold text-primary"
             >
               <Plus className="size-4" /> Добавить пункт
             </button>

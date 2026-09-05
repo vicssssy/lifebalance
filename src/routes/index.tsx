@@ -1,5 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ArrowRight, Sparks as Sparkles } from "iconoir-react";
 
 export const Route = createFileRoute("/")({
@@ -28,7 +29,7 @@ function Landing() {
   return (
     <div className="app-screen mx-auto flex min-h-dvh w-full max-w-md flex-col justify-between px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] min-[380px]:px-6 min-[380px]:pt-16">
       <div className="animate-rise">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-mid">
+        <div className="flex size-12 items-center justify-center rounded-[18px] bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-mid">
           <Sparkles className="size-5" strokeWidth={2} aria-hidden />
         </div>
         <p className="mt-7 text-sm font-semibold text-primary">Планирование через смысл</p>
@@ -43,12 +44,10 @@ function Landing() {
         </p>
       </div>
 
-      <div className="glass-surface mt-8 space-y-3 rounded-[30px] p-3.5">
-        <Button asChild size="lg">
-          <Link to="/auth">
-            Начать <ArrowRight aria-hidden />
-          </Link>
-        </Button>
+      <div className="control-glass mt-8 space-y-3 rounded-[30px] p-3.5">
+        <Link to="/auth" className={cn(buttonVariants({ size: "lg" }), "w-full")}>
+          Начать <ArrowRight aria-hidden />
+        </Link>
       </div>
     </div>
   );

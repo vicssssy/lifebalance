@@ -10,7 +10,7 @@ export function DayProgress({ occurrences }: { occurrences: Occurrence[] }) {
   const percent = Math.round((done / total) * 100);
 
   return (
-    <section className="animate-rise mb-8 rounded-[30px] border border-white/80 bg-white/72 p-5 shadow-mid backdrop-blur-2xl">
+    <section className="content-surface animate-rise mb-8 rounded-[30px] p-5">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-base font-semibold text-foreground">
           Выполнено <span className="tabular-nums">{done}</span> из{" "}

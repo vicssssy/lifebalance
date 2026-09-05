@@ -17,7 +17,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 function NotFoundComponent() {
   return (
     <div className="phone-app-shell flex items-center justify-center bg-background px-6">
-      <div className="glass-surface max-w-sm rounded-[34px] px-6 py-10 text-center">
+      <div className="content-surface max-w-sm rounded-[34px] px-6 py-10 text-center">
         <h1 className="text-3xl">Страница не найдена</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Возможно, ссылка устарела или страница была перемещена.
@@ -44,7 +44,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div className="phone-app-shell flex items-center justify-center bg-background px-6">
-      <div className="glass-surface max-w-sm rounded-[34px] px-6 py-10 text-center">
+      <div className="content-surface max-w-sm rounded-[34px] px-6 py-10 text-center">
         <h1 className="text-2xl">Не удалось загрузить страницу</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Попробуй обновить или вернуться на главную.

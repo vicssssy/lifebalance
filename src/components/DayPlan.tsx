@@ -185,19 +185,21 @@ export function DayPlan({
       onDragCancel={() => setDragging(false)}
       onDragEnd={handleDragEnd}
     >
-      <div className="animate-rise space-y-4">
+      <div className="animate-rise space-y-5">
         {sections.map((section) => {
           const PartIcon = DAY_PART_ICON[section.key];
           return (
             <section key={section.key}>
-              <div className="mb-3 flex items-center gap-2.5 px-1 text-muted-foreground">
-                <PartIcon className="size-5 text-primary/65" strokeWidth={1.75} aria-hidden />
+              <div className="mb-3 flex items-center gap-2.5 px-1.5 text-muted-foreground">
+                <span className="flex size-7 items-center justify-center rounded-full bg-secondary/75 text-primary">
+                  <PartIcon className="size-4" strokeWidth={1.75} aria-hidden />
+                </span>
                 <SectionTitle className="block uppercase tracking-[0.09em]">
                   {section.title}
                 </SectionTitle>
               </div>
               <DropSection part={section.key} active={dragging}>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {section.items.map((occ) => (
                     <DraggableCard
                       key={occ.key}

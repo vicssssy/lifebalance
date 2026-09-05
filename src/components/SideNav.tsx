@@ -9,7 +9,7 @@ export function SideNav() {
   const navigate = useNavigate();
 
   return (
-    <aside className="glass-surface fixed inset-y-0 left-0 z-40 hidden w-60 flex-col rounded-none border-y-0 border-l-0 px-3 py-6 md:flex">
+    <aside className="control-glass fixed inset-y-0 left-0 z-40 hidden w-60 flex-col rounded-none border-y-0 border-l-0 px-3 py-6 md:flex">
       <div className="px-3">
         <p className="day-part-title">Путь</p>
         <p className="mt-1 text-lg font-semibold leading-snug">Планирование</p>
@@ -30,7 +30,7 @@ export function SideNav() {
             key={to}
             to={to}
             activeOptions={{ exact: false }}
-            className="focus-ring group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-[background-color,color,transform] duration-200 ease-out hover:bg-secondary hover:text-foreground active:scale-[0.99] data-[status=active]:bg-card data-[status=active]:text-foreground data-[status=active]:shadow-low"
+            className="focus-ring group flex min-h-11 items-center gap-3 rounded-[18px] px-3 text-sm font-medium text-muted-foreground transition-[background-color,color,transform] duration-200 ease-out hover:bg-secondary hover:text-foreground active:scale-[0.99] data-[status=active]:bg-white/72 data-[status=active]:text-foreground data-[status=active]:shadow-low"
           >
             <Icon className="size-5" strokeWidth={ICON_STROKE} aria-hidden />
             <span className="truncate">{label}</span>

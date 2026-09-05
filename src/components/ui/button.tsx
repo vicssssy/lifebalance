@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap",
-    "rounded-2xl font-semibold cursor-pointer",
+    "rounded-[18px] font-semibold cursor-pointer",
     "transition-[transform,box-shadow,background-color,border-color,color] duration-200 ease-out",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     "active:scale-[0.98] active:shadow-low",
@@ -23,13 +23,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[0_12px_28px_rgb(96_71_232_/_0.28)] hover:-translate-y-px hover:shadow-high",
+          "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.25)] hover:-translate-y-px hover:shadow-high",
         primary:
-          "bg-primary text-primary-foreground shadow-[0_12px_28px_rgb(96_71_232_/_0.28)] hover:-translate-y-px hover:shadow-high",
+          "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.25)] hover:-translate-y-px hover:shadow-high",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-low hover:bg-accent hover:-translate-y-px hover:shadow-mid",
+          "border border-white/82 bg-secondary/88 text-secondary-foreground shadow-low hover:bg-accent hover:-translate-y-px hover:shadow-mid",
         outline:
-          "border border-white/80 bg-white/72 text-foreground shadow-mid backdrop-blur-2xl hover:bg-white/85 hover:-translate-y-px hover:shadow-high",
+          "control-glass text-foreground hover:bg-white/88 hover:-translate-y-px hover:shadow-high",
         ghost: "text-muted-foreground hover:bg-secondary hover:text-foreground",
         glass: "glass-surface text-foreground hover:-translate-y-px hover:shadow-mid",
         destructive:

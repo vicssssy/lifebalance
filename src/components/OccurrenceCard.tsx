@@ -62,21 +62,21 @@ export function OccurrenceCard({
       ref={drag?.ref as Ref<HTMLDivElement>}
       style={drag?.style}
       className={cn(
-        "grid w-full grid-cols-[44px_minmax(0,1fr)] items-start gap-1 transition-[transform,opacity] duration-200",
+        "grid w-full grid-cols-[48px_minmax(0,1fr)] items-stretch gap-2 transition-[transform,opacity] duration-200",
         completed && "opacity-85",
         skipped && "opacity-60",
         drag?.isDragging && "relative z-20 shadow-mid",
       )}
     >
-      <div className="relative flex min-h-full flex-col items-center justify-center">
+      <div className="relative flex min-h-full flex-col items-center justify-center py-1">
         <span
-          className="flex size-10 items-center justify-center rounded-full border border-white/80 bg-primary text-primary-foreground shadow-[0_12px_26px_rgb(96_71_232_/_0.28)]"
+          className="flex size-11 items-center justify-center rounded-[18px] border border-white/65 bg-[linear-gradient(145deg,#735cff,#5038dc)] text-primary-foreground shadow-[0_10px_24px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.28)]"
           aria-hidden
         >
-          <ActionIcon className="size-[18px]" strokeWidth={1.8} />
+          <ActionIcon className="size-[19px]" strokeWidth={1.8} />
         </span>
         {time ? (
-          <span className="mt-1.5 text-center text-[12px] font-medium leading-tight tabular-nums text-muted-foreground">
+          <span className="mt-1.5 text-center text-[12px] font-semibold leading-tight tabular-nums text-muted-foreground">
             {time}
           </span>
         ) : null}
@@ -84,8 +84,8 @@ export function OccurrenceCard({
 
       <div
         className={cn(
-          "flex min-w-0 items-center rounded-[24px] border border-white/85 bg-white/74 shadow-[0_18px_44px_rgb(38_38_70_/_0.08)] backdrop-blur-2xl transition-[transform,box-shadow] duration-200 active:scale-[0.99]",
-          muted && "bg-white/55 shadow-low",
+          "content-surface flex min-w-0 items-center rounded-[26px] transition-[transform,box-shadow] duration-200 active:scale-[0.99]",
+          muted && "bg-white/72 shadow-low",
           skipped && "border-dashed border-border/80",
         )}
       >
@@ -93,14 +93,14 @@ export function OccurrenceCard({
           to="/action/$actionId"
           params={{ actionId: action.id }}
           search={{ date, scheduleId: occurrence.schedule.id, edit: undefined }}
-          className="focus-ring min-w-0 flex-1 rounded-[24px] px-3 py-2.5"
+          className="focus-ring min-w-0 flex-1 rounded-[26px] px-3.5 py-3"
         >
-          <p className="text-[11px] font-semibold text-primary">
+          <p className="text-[11px] font-semibold tracking-[0.01em] text-primary">
             {ACTION_FORMAT_NAME[action.type]}
           </p>
           <p
             className={cn(
-              "mt-1 text-[16px] font-semibold leading-[1.22] tracking-[-0.018em]",
+              "mt-1 text-[16px] font-semibold leading-[1.24] tracking-[-0.018em]",
               maxTitleLines === 2 && "line-clamp-2",
               muted ? "text-foreground/65" : "text-foreground",
             )}
@@ -125,12 +125,12 @@ export function OccurrenceCard({
         >
           <span
             className={cn(
-              "flex size-7.5 items-center justify-center rounded-full border-2 transition-[background-color,border-color,transform] duration-200",
+              "flex size-8 items-center justify-center rounded-full border-2 transition-[background-color,border-color,transform] duration-200",
               completed
                 ? "border-primary bg-primary text-primary-foreground"
                 : skipped
                   ? "border-border bg-secondary text-muted-foreground"
-                  : "border-[#d8d9e4] bg-white/55 text-transparent",
+                  : "border-[#d5d8e6] bg-white text-transparent shadow-[inset_0_1px_2px_rgb(34_32_70_/_0.05)]",
             )}
           >
             {completed ? (
@@ -145,6 +145,7 @@ export function OccurrenceCard({
           <button
             type="button"
             aria-label="Перенести действие"
+            onClick={drag.handleProps.onClick}
             {...drag.handleProps}
             className="focus-ring touch-target flex shrink-0 cursor-grab touch-none items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-primary"
           >

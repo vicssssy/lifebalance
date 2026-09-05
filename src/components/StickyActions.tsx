@@ -15,12 +15,12 @@ export function StickyActions({
   return (
     <div
       className={cn(
-        "sticky z-30 -mx-5 mt-8 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] sm:-mx-6",
+        "sticky z-30 -mx-5 mt-8 bottom-[calc(5.9rem+env(safe-area-inset-bottom))] sm:-mx-6",
         className,
       )}
     >
-      <div className="glass-surface mx-2 rounded-[30px] border-white/85">
-        <PageContainer className="safe-bottom pt-3">
+      <div className="control-glass mx-2 rounded-[28px]">
+        <PageContainer className="py-3">
           {hint ? (
             <p className="mb-2 text-center text-xs leading-relaxed text-muted-foreground">{hint}</p>
           ) : null}

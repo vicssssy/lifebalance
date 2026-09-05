@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { formatDuration, splitDuration } from "@/domain/schedule";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -51,7 +52,7 @@ function Wheel({
             if (next !== value) onChange(next);
           }, 90);
         }}
-        className="no-scrollbar h-[120px] snap-y snap-mandatory overflow-y-scroll overscroll-contain"
+        className="h-[120px] snap-y snap-mandatory overflow-y-scroll overscroll-contain"
         style={{ scrollPaddingBlock: WHEEL_PADDING }}
       >
         <div style={{ height: WHEEL_PADDING }} />
@@ -88,8 +89,8 @@ export function DurationWheels({
   onChange: (next: Partial<{ hours: number; minutes: number; seconds: number }>) => void;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/85 bg-white/42 px-2 pb-1 shadow-low backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-x-2 top-[60px] h-10 -translate-y-1/2 rounded-[16px] border border-primary/10 bg-secondary/72 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.85)]" />
+    <div className="content-surface relative overflow-hidden rounded-[28px] px-2 pb-1">
+      <div className="pointer-events-none absolute inset-x-2 top-[60px] h-10 -translate-y-1/2 rounded-[16px] border border-primary/10 bg-secondary/78 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.9)]" />
       <div className="relative flex gap-1">
         <Wheel values={HOURS} value={hours} onChange={(v) => onChange({ hours: v })} unit="часы" />
         <Wheel
@@ -127,10 +128,10 @@ export function PickerSheet({
   title?: string;
   summary?: string | null;
 }) {
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="phone-overlay z-50 flex items-end bg-foreground/20 backdrop-blur-sm"
+      className="phone-overlay z-[100] flex items-end bg-foreground/18 backdrop-blur-sm"
       onClick={onCancel}
     >
       <div
@@ -153,20 +154,21 @@ export function PickerSheet({
           <button
             type="button"
             onClick={onCancel}
-            className="focus-ring touch-target flex-1 rounded-[18px] border border-white/85 bg-white/66 py-3 text-sm font-semibold text-muted-foreground shadow-low backdrop-blur-2xl transition-[transform,background-color] duration-200 active:scale-[0.98]"
+            className="control-glass focus-ring touch-target flex-1 rounded-[18px] py-3 text-sm font-semibold text-muted-foreground transition-[transform,background-color] duration-200 active:scale-[0.98]"
           >
             Отменить
           </button>
           <button
             type="button"
             onClick={onSubmit}
-            className="focus-ring touch-target flex-1 rounded-[18px] bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_rgb(96_71_232_/_0.28)] transition-[transform,box-shadow] duration-200 active:scale-[0.98]"
+            className="focus-ring touch-target flex-1 rounded-[18px] bg-[linear-gradient(145deg,#725cff,#5038db)] py-3 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3)] transition-[transform,box-shadow] duration-200 active:scale-[0.98]"
           >
             {submitLabel}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -194,7 +196,7 @@ export function TimeSheet({
         type="time"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="w-full rounded-[22px] border border-white/80 bg-white/70 px-4 py-3 text-center text-2xl tabular-nums shadow-mid backdrop-blur-2xl focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
+        className="content-surface w-full rounded-[22px] px-4 py-3 text-center text-2xl tabular-nums focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
       />
       {draft ? (
         <button

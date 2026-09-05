@@ -77,8 +77,8 @@ function CircleAction({
         className={cn(
           "focus-ring flex size-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:opacity-60",
           variant === "primary"
-            ? "bg-primary text-primary-foreground shadow-mid"
-            : "border border-white/85 bg-white/72 text-foreground shadow-mid backdrop-blur-2xl",
+            ? "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-mid"
+            : "control-glass text-foreground",
         )}
       >
         <Icon className="size-5" strokeWidth={1.9} aria-hidden />
@@ -90,7 +90,7 @@ function CircleAction({
 
 function MetaChip({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3.5 text-sm font-medium text-foreground shadow-mid backdrop-blur-2xl">
+    <span className="control-glass inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-foreground">
       <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
       {children}
     </span>
@@ -179,7 +179,7 @@ function ActionDetail() {
   if (isLoading) {
     return (
       <div className="safe-top px-5 py-16">
-        <p className="glass-surface rounded-[30px] px-5 py-10 text-center text-sm text-muted-foreground">
+        <p className="content-surface rounded-[30px] px-5 py-10 text-center text-sm text-muted-foreground">
           Загружаем…
         </p>
       </div>
@@ -189,7 +189,7 @@ function ActionDetail() {
   if (!action) {
     return (
       <div className="safe-top px-5 py-16 text-center">
-        <div className="glass-surface rounded-[30px] px-5 py-10">
+        <div className="content-surface rounded-[30px] px-5 py-10">
           <p className="text-lg font-semibold">Действие не найдено</p>
           <button
             type="button"
@@ -287,7 +287,7 @@ function ActionDetail() {
                       search: { date: search.date, scheduleId: search.scheduleId, edit: true },
                     })
                   }
-                  className="focus-ring inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-mid"
+                  className="focus-ring inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-[linear-gradient(145deg,#725cff,#5038db)] px-4 text-sm font-semibold text-primary-foreground shadow-mid"
                 >
                   <EditPencil className="size-4" aria-hidden />
                   Изменить
@@ -321,7 +321,7 @@ function ActionDetail() {
             <>
               <Divider />
               <Section title="Моя цель">
-                <div className="rounded-[24px] border border-white/80 bg-white/70 px-4 py-3.5 shadow-mid backdrop-blur-2xl">
+                <div className="content-surface rounded-[24px] px-4 py-3.5">
                   <p className="text-base leading-relaxed">{goal.result_text}</p>
                 </div>
               </Section>
@@ -341,7 +341,7 @@ function ActionDetail() {
             <>
               <Divider />
               <Section title="Ритуал">
-                <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/64 shadow-mid backdrop-blur-2xl">
+                <div className="content-surface overflow-hidden rounded-[26px]">
                   {items.map((item) => {
                     const done = itemDone(item.id);
                     return (
@@ -403,7 +403,7 @@ function ActionDetail() {
             <>
               <Divider />
               <Section title="Материалы">
-                <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/68 shadow-mid backdrop-blur-2xl">
+                <div className="content-surface overflow-hidden rounded-[26px]">
                   {attachments.map((attachment, index) => (
                     <a
                       key={attachment.id}

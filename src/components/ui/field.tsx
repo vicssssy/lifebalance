@@ -45,7 +45,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className={cn(className)}
+        className={cn("resize-none", className)}
       />
     );
   }

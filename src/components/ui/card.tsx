@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
 const cardVariants = cva("rounded-3xl text-card-foreground", {
   variants: {
     variant: {
-      default: "border border-white/80 bg-white/74 shadow-mid backdrop-blur-2xl",
-      elevated: "border border-white/85 bg-white/82 shadow-high backdrop-blur-2xl",
+      default: "content-surface",
+      elevated: "content-surface shadow-high",
       glass: "glass-surface",
       gradient: "surface-gradient border border-border shadow-low",
-      flat: "border border-white/70 bg-secondary/75",
+      flat: "border border-white/75 bg-secondary/72",
     },
     padding: {
       none: "",

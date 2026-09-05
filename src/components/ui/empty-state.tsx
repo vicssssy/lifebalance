@@ -19,12 +19,12 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "glass-surface animate-rise flex w-full flex-col items-center justify-center gap-3 rounded-[30px] border-white/85 px-6 py-10 text-center",
+        "content-surface animate-rise flex w-full flex-col items-center justify-center gap-3 rounded-[30px] px-6 py-10 text-center",
         className,
       )}
     >
       {Icon ? (
-        <span className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_26px_rgb(96_71_232_/_0.26)]">
+        <span className="flex size-12 items-center justify-center rounded-full bg-[linear-gradient(145deg,#755fff,#5038db)] text-primary-foreground shadow-[0_12px_26px_rgb(83_62_224_/_0.28)]">
           <Icon className="size-5" strokeWidth={1.75} />
         </span>
       ) : null}

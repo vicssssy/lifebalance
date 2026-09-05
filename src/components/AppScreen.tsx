@@ -23,14 +23,14 @@ export function AppScreen({
 }: AppScreenProps) {
   return (
     <div className="app-screen min-h-dvh w-full bg-transparent">
-      <header className="safe-top pb-6 pt-3">
+      <header className="safe-top pb-5 pt-4">
         <PageContainer>
           {header ?? (
             <PageHeading className="animate-rise" title={title} subtitle={subtitle} right={right} />
           )}
         </PageContainer>
       </header>
-      <main className={cn(withNav ? "pb-36" : "pb-16")}>
+      <main className={cn(withNav ? "pb-32" : "pb-16")}>
         <PageContainer>{children}</PageContainer>
       </main>
     </div>

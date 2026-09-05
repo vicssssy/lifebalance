@@ -37,11 +37,11 @@ export function PageHeading({
     <div className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3.5", className)}>
       <div className="min-w-0">
         {eyebrow ? <p className="day-part-title mb-1.5">{eyebrow}</p> : null}
-        <h1 className="text-[clamp(2.05rem,8.6vw,2.5rem)] font-bold leading-[1.02] tracking-[-0.045em] text-foreground">
+        <h1 className="text-[clamp(2rem,8.2vw,2.45rem)] font-bold leading-[1.04] tracking-[-0.04em] text-foreground">
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-3 text-[17px] font-medium leading-snug tracking-[-0.012em] text-muted-foreground">
+          <p className="mt-2.5 text-[16px] font-medium leading-snug tracking-[-0.01em] text-muted-foreground">
             {subtitle}
           </p>
         ) : null}
@@ -85,7 +85,7 @@ export function MetaChip({
   children: ReactNode;
 }) {
   return (
-    <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground">
+    <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-white/85 bg-white/82 px-2.5 text-xs font-medium text-muted-foreground shadow-low">
       {Icon ? <Icon className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden /> : null}
       <span className="tabular-nums">{children}</span>
     </span>
@@ -161,6 +161,7 @@ export function EditableSection({
               onChange={(e) => setDraft(e.target.value)}
               placeholder={placeholder}
               rows={3}
+              className="resize-none"
               autoFocus
             />
           ) : (

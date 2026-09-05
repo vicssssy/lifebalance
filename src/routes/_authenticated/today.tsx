@@ -55,16 +55,16 @@ function TodayDateHero({
 
   return (
     <section
-      className="animate-rise overflow-hidden rounded-[30px] border border-white/85 bg-white/76 px-4 pb-4 pt-5 shadow-mid backdrop-blur-2xl min-[390px]:px-5"
+      className="content-surface animate-rise overflow-hidden rounded-[32px] px-4 pb-4 pt-5 min-[390px]:px-5"
       aria-label={`Выбрано: ${formatDayLong(date)}`}
     >
       <div className="flex items-start justify-between gap-4 px-1">
         <div className="flex items-center gap-2.5">
-          <span className="text-[64px] font-semibold leading-none tracking-[-0.065em] text-foreground">
+          <span className="text-[66px] font-semibold leading-none tracking-[-0.065em] text-foreground">
             {date.getDate()}
           </span>
           <span
-            className="mt-2 size-3 rounded-full bg-primary shadow-[0_5px_14px_rgb(96_71_232_/_0.32)]"
+            className="mt-2 size-3 rounded-full bg-[linear-gradient(145deg,#765fff,#4f37dc)] shadow-[0_5px_14px_rgb(83_62_224_/_0.34)]"
             aria-hidden
           />
         </div>
@@ -89,8 +89,8 @@ function TodayDateHero({
               type="button"
               className={
                 selected
-                  ? "focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-[18px] bg-secondary text-primary shadow-low transition-colors"
-                  : "focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-[18px] text-muted-foreground transition-colors hover:bg-white/55 hover:text-foreground"
+                  ? "focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-[20px] border border-white/88 bg-secondary text-primary shadow-low transition-[background-color,color,transform] active:scale-95"
+                  : "focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-[20px] text-muted-foreground transition-[background-color,color,transform] hover:bg-secondary/45 hover:text-foreground active:scale-95"
               }
               onClick={() => onSelect(dayKey)}
               aria-label={`Выбрать ${formatDayLong(day)}`}

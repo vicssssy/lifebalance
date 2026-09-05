@@ -27,14 +27,14 @@ export function ScreenHeader({
 }) {
   return (
     <header className={cn("sticky top-0 z-30", className)}>
-      <div className="border-b border-white/70 bg-background/78 backdrop-blur-2xl">
-        <PageContainer className="safe-top pb-2.5">
+      <div className="border-b border-white/55 bg-background/62 backdrop-blur-[28px] backdrop-saturate-150">
+        <PageContainer className="safe-top pb-2">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={onBack}
               aria-label={backLabel}
-              className="focus-ring inline-flex min-h-12 items-center gap-1 rounded-full border border-white/85 bg-white/74 px-3 text-[13px] font-semibold text-foreground shadow-mid backdrop-blur-2xl transition-[transform,box-shadow,background-color] duration-200 ease-out hover:bg-white/88 active:scale-[0.96]"
+              className="control-glass focus-ring inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-[13px] font-semibold text-foreground transition-[transform,box-shadow,background-color] duration-200 ease-out hover:bg-white/88 active:scale-[0.96]"
             >
               <NavArrowLeft className="size-5" strokeWidth={ICON_STROKE} aria-hidden />
               <span>{backLabel}</span>
@@ -45,7 +45,7 @@ export function ScreenHeader({
       </div>
 
       {eyebrow || title || subtitle ? (
-        <PageContainer className="pt-4">
+        <PageContainer className="pt-5">
           <PageHeading eyebrow={eyebrow} title={title ?? ""} subtitle={subtitle} />
         </PageContainer>
       ) : null}

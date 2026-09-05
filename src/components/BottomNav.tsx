@@ -7,13 +7,13 @@ function BottomNavItem({ to, label, icon: Icon }: NavItem) {
   return (
     <Link
       to={to}
-      className="touch-target group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-foreground/65 transition-[color,transform] duration-200 ease-out focus-ring data-[status=active]:text-primary"
+      className="touch-target group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-1.5 text-foreground/55 transition-[background-color,color,transform] duration-200 ease-out focus-ring data-[status=active]:bg-white/55 data-[status=active]:text-primary"
       activeOptions={{ exact: false }}
     >
       <span className="flex size-7 items-center justify-center transition-transform duration-200 ease-out group-data-[status=active]:-translate-y-0.5 group-active:scale-90">
-        <Icon className="size-[21px]" strokeWidth={ICON_STROKE} aria-hidden />
+        <Icon className="size-[20px]" strokeWidth={ICON_STROKE} aria-hidden />
       </span>
-      <span className="whitespace-nowrap text-[9px] font-semibold leading-none tracking-[-0.03em] min-[360px]:text-[11px]">
+      <span className="whitespace-nowrap text-[9px] font-semibold leading-none tracking-[-0.025em] min-[360px]:text-[10px]">
         {label}
       </span>
     </Link>
@@ -26,10 +26,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="phone-bottom-nav fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] rounded-t-[34px] border-x border-t border-white/90 bg-white shadow-[0_-10px_36px_rgb(35_33_72_/_0.12)]"
+      className="phone-bottom-nav control-glass fixed bottom-[max(8px,env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-16px)] max-w-[414px] -translate-x-1/2 rounded-[30px]"
       aria-label="Основная навигация"
     >
-      <div className="safe-bottom flex min-w-0 items-stretch px-1.5 pt-2">
+      <div className="flex min-w-0 items-stretch px-1.5 py-1.5">
         {NAV_LEFT.map((item) => (
           <BottomNavItem key={item.to} {...item} />
         ))}
@@ -39,9 +39,9 @@ export function BottomNav() {
             type="button"
             aria-label="Добавить"
             onClick={() => navigate({ to: "/new" })}
-            className="focus-ring -mt-7 flex size-16 items-center justify-center rounded-full border-[5px] border-[#f5f5fb] bg-primary text-primary-foreground shadow-[0_14px_34px_rgb(96_71_232_/_0.36)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-high active:scale-95"
+            className="focus-ring -mt-6 flex size-[62px] items-center justify-center rounded-full border-[4px] border-white/80 bg-[linear-gradient(145deg,#755fff,#4e36dc)] text-primary-foreground shadow-[0_14px_32px_rgb(83_62_224_/_0.38),inset_0_1px_1px_rgb(255_255_255_/_0.38)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-high active:scale-95"
           >
-            <Plus className="size-[29px]" strokeWidth={2} aria-hidden />
+            <Plus className="size-[28px]" strokeWidth={1.9} aria-hidden />
           </button>
         </div>
 

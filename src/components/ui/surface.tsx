@@ -11,16 +11,7 @@ export function Surface({
   className?: string;
   as?: "div" | "section" | "li";
 }) {
-  return (
-    <Tag
-      className={cn(
-        "rounded-3xl border border-white/80 bg-white/74 p-5 shadow-mid backdrop-blur-2xl",
-        className,
-      )}
-    >
-      {children}
-    </Tag>
-  );
+  return <Tag className={cn("content-surface rounded-3xl p-5", className)}>{children}</Tag>;
 }
 
 /** Мелкий заголовок раздела. */

@@ -1,10 +1,9 @@
 /**
- * Единый источник правды дизайн-системы.
- * Значения здесь зеркалят CSS-переменные в `src/styles.css`
+ * Runtime mirror of the iOS 27 design tokens documented in DESIGN.md.
+ * Values mirror CSS variables in `src/styles.css`
  * (@theme / :root) — меняем в паре, чтобы токены не расходились.
  *
- * Бренд-цвета намеренно НЕ придуманы: `brandPrimary` / `brandAccent`
- * указывают на нейтральную шкалу до момента, когда бренд определят явно.
+ * Keep this file and the CSS source in sync.
  */
 
 /** Нейтральная тёплая шкала 0–1000 (премиальный светлый фундамент). */
@@ -26,25 +25,27 @@ export const neutral = {
 
 /** Семантические токены. Бренд пока = нейтраль. */
 export const semantic = {
-  brandPrimary: "#6047E8",
+  brandPrimary: "#5B45EE",
   brandPrimaryForeground: "#FFFFFF",
   brandAccent: "#EEEAFE",
-  brandAccentForeground: "#5540D9",
-  background: "#F6F7FC",
-  foreground: "#171A2A",
-  surface: neutral[100],
+  brandAccentForeground: "#4932D8",
+  background: "#F5F6FC",
+  foreground: "#171827",
+  surface: "#ECEEF7",
   card: neutral[0],
-  border: "#E4E5EF",
-  muted: "#EFF0F7",
-  mutedForeground: "#74788F",
+  border: "#E1E3EF",
+  muted: "#ECEEF7",
+  mutedForeground: "#72768A",
   hint: "#9093A6",
+  success: "#2F9C73",
+  destructive: "#D55361",
 } as const;
 
 /** Радиусы: sm 6 / md 10 / xl 16 px. */
 export const radius = {
-  sm: "6px",
-  md: "10px",
-  xl: "28px",
+  sm: "10px",
+  md: "14px",
+  xl: "26px",
 } as const;
 
 /** Строгая сетка 8pt (половинный шаг 4px для мелких зазоров). */
@@ -61,9 +62,9 @@ export const spacing = {
 
 /** Мягкие «apple-style» тени: low / mid / high. */
 export const shadow = {
-  low: "0 6px 18px rgb(35 33 72 / 0.045)",
-  mid: "0 16px 38px rgb(35 33 72 / 0.085)",
-  high: "0 24px 64px rgb(35 33 72 / 0.16)",
+  low: "0 4px 14px rgb(40 38 82 / 0.055)",
+  mid: "0 14px 34px rgb(40 38 82 / 0.09)",
+  high: "0 24px 60px rgb(40 38 82 / 0.18)",
 } as const;
 
 /** Inter variable, веса 400 / 500 / 600, шкала XS→XL. */

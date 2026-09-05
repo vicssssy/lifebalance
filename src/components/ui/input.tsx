@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 
 /** Поле ввода: 44px тач-таргет, rounded-xl, тонкая граница, аккуратный focus-ring. */
 const inputBase = [
-  "flex w-full rounded-[22px] border border-white/80 bg-white/72 px-4 text-[16px] text-foreground shadow-mid backdrop-blur-2xl",
+  "content-surface flex w-full rounded-[22px] px-4 text-[16px] text-foreground",
   "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
   "placeholder:text-hint",
-  "hover:border-neutral-400",
+  "hover:border-primary/20",
   "focus:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
   "disabled:cursor-not-allowed disabled:opacity-50",
 ].join(" ");

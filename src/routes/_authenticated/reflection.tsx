@@ -100,7 +100,7 @@ function ReflectionScreen() {
               ))}
             </Card>
           ) : (
-            <p className="rounded-[24px] border border-white/80 bg-white/62 px-4 py-4 text-sm text-muted-foreground shadow-mid backdrop-blur-2xl">
+            <p className="content-surface rounded-[24px] px-4 py-4 text-sm text-muted-foreground">
               В этом месяце не было запланированных действий.
             </p>
           )}
