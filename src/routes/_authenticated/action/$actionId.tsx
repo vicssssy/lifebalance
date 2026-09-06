@@ -90,7 +90,7 @@ function CircleAction({
 
 function MetaChip({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <span className="control-glass inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-foreground">
+    <span className="control-glass inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm font-medium text-foreground">
       <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
       {children}
     </span>
@@ -299,7 +299,12 @@ function ActionDetail() {
               {action.name}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="region"
+              aria-label="Параметры действия"
+              tabIndex={0}
+              className="focus-ring -mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain rounded-xl px-1 py-2"
+            >
               {time ? <MetaChip icon={Clock}>{time}</MetaChip> : null}
               {duration ? <MetaChip icon={Hourglass}>{duration}</MetaChip> : null}
               <MetaChip icon={Calendar}>
