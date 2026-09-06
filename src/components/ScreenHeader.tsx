@@ -28,8 +28,8 @@ export function ScreenHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("sticky top-0 z-30", className)}>
-      <div className="border-b border-white/55 bg-background/62 backdrop-blur-[28px] backdrop-saturate-150">
+    <header className={cn("relative z-30", className)}>
+      <div className="border-b border-white/55 bg-background/80 backdrop-blur-[28px] backdrop-saturate-150">
         <PageContainer className="safe-top pb-2">
           <div className="flex items-center justify-between gap-3">
             <button

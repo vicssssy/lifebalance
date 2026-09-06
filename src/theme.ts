@@ -29,14 +29,14 @@ export const semantic = {
   brandPrimaryForeground: "#FFFFFF",
   brandAccent: "#EEEAFE",
   brandAccentForeground: "#4932D8",
-  background: "#F5F6FC",
+  background: "#F2F3F7",
   foreground: "#171827",
   surface: "#ECEEF7",
   card: neutral[0],
   border: "#E1E3EF",
   muted: "#ECEEF7",
-  mutedForeground: "#72768A",
-  hint: "#9093A6",
+  mutedForeground: "#666A7D",
+  hint: "#75798C",
   success: "#2F9C73",
   occurrenceCompleted: "#C8EA54",
   destructive: "#D55361",
@@ -63,8 +63,8 @@ export const spacing = {
 
 /** Мягкие «apple-style» тени: low / mid / high. */
 export const shadow = {
-  low: "0 4px 14px rgb(40 38 82 / 0.055)",
-  mid: "0 14px 34px rgb(40 38 82 / 0.09)",
+  low: "0 2px 8px rgb(30 32 54 / 0.035)",
+  mid: "0 8px 24px rgb(30 32 54 / 0.065)",
   high: "0 24px 60px rgb(40 38 82 / 0.18)",
 } as const;
 

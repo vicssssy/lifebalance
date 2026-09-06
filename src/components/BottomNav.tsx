@@ -7,11 +7,11 @@ function BottomNavItem({ to, label, icon: Icon }: NavItem) {
   return (
     <Link
       to={to}
-      className="touch-target group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] py-1.5 text-foreground/55 transition-[background-color,color,transform] duration-200 ease-out focus-ring data-[status=active]:bg-white/55 data-[status=active]:text-primary"
+      className="touch-target group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[24px] py-2 text-muted-foreground transition-[background-color,color,transform] duration-200 ease-out focus-ring data-[status=active]:bg-secondary/80 data-[status=active]:text-primary"
       activeOptions={{ exact: false }}
     >
       <span className="flex size-7 items-center justify-center transition-transform duration-200 ease-out group-data-[status=active]:-translate-y-0.5 group-active:scale-90">
-        <Icon className="size-[20px]" strokeWidth={ICON_STROKE} aria-hidden />
+        <Icon className="size-[22px]" strokeWidth={ICON_STROKE} aria-hidden />
       </span>
       <span className="whitespace-nowrap text-[9px] font-semibold leading-none tracking-[-0.025em] min-[360px]:text-[10px]">
         {label}
@@ -39,7 +39,7 @@ export function BottomNav() {
             type="button"
             aria-label="Добавить"
             onClick={() => navigate({ to: "/new" })}
-            className="focus-ring -mt-6 flex size-[62px] items-center justify-center rounded-full border-[4px] border-white/80 bg-[linear-gradient(145deg,#755fff,#4e36dc)] text-primary-foreground shadow-[0_14px_32px_rgb(83_62_224_/_0.38),inset_0_1px_1px_rgb(255_255_255_/_0.38)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-high active:scale-95"
+            className="accent-control focus-ring -mt-5 flex size-[60px] items-center justify-center rounded-full border-[4px] border-white/90 transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-mid active:scale-95"
           >
             <Plus className="size-[28px]" strokeWidth={1.9} aria-hidden />
           </button>

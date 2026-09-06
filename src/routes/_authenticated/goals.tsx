@@ -255,7 +255,7 @@ function GoalsScreen() {
                         {goal.status === "active" ? (
                           <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
                             <span
-                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-[16px] bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_26px_rgb(83_62_224_/_0.28)]"
+                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-[16px] bg-secondary text-primary"
                               aria-hidden
                             >
                               <Check className="size-[18px]" strokeWidth={2.25} />

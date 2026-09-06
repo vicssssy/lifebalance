@@ -16,5 +16,7 @@ export function Surface({
 
 /** Мелкий заголовок раздела. */
 export function SectionTitle({ children, className }: { children: ReactNode; className?: string }) {
-  return <h2 className={cn("day-part-title", className)}>{children}</h2>;
+  return (
+    <h2 className={cn("text-[17px] font-semibold tracking-[-0.02em]", className)}>{children}</h2>
+  );
 }

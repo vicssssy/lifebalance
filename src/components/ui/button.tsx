@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap",
-    "rounded-[18px] font-semibold cursor-pointer",
+    "rounded-full font-semibold cursor-pointer",
     "transition-[transform,box-shadow,background-color,border-color,color] duration-200 ease-out",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     "active:scale-[0.98] active:shadow-low",
@@ -23,10 +23,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         occurrenceCompleted: "bg-occurrence-completed text-foreground shadow-low hover:shadow-mid",
-        default:
-          "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.25)] hover:-translate-y-px hover:shadow-high",
-        primary:
-          "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.25)] hover:-translate-y-px hover:shadow-high",
+        default: "accent-control hover:brightness-105",
+        primary: "accent-control hover:brightness-105",
         secondary:
           "border border-white/82 bg-secondary/88 text-secondary-foreground shadow-low hover:bg-accent hover:-translate-y-px hover:shadow-mid",
         outline:

@@ -34,19 +34,24 @@ export function PageHeading({
   className?: string;
 }) {
   return (
-    <div className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3.5", className)}>
+    <div
+      className={cn(
+        right ? "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3.5" : "min-w-0",
+        className,
+      )}
+    >
       <div className="min-w-0">
         {eyebrow ? <p className="day-part-title mb-1.5">{eyebrow}</p> : null}
-        <h1 className="text-[clamp(2rem,8.2vw,2.45rem)] font-bold leading-[1.04] tracking-[-0.04em] text-foreground">
+        <h1 className="text-[clamp(1.85rem,7.6vw,2.125rem)] font-bold leading-[1.12] tracking-[-0.035em] text-foreground [text-wrap:balance]">
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-2.5 text-[16px] font-medium leading-snug tracking-[-0.01em] text-muted-foreground">
+          <p className="mt-2 text-[14px] font-normal leading-relaxed tracking-[-0.01em] text-muted-foreground">
             {subtitle}
           </p>
         ) : null}
       </div>
-      {right ? <div className="shrink-0">{right}</div> : <span />}
+      {right ? <div className="shrink-0">{right}</div> : null}
     </div>
   );
 }
@@ -67,7 +72,11 @@ export function Section({
     <section className={cn("space-y-3", className)}>
       {title || action ? (
         <div className="flex min-h-6 items-center justify-between gap-3">
-          {title ? <h2 className="day-part-title">{title}</h2> : <span />}
+          {title ? (
+            <h2 className="text-[17px] font-semibold tracking-[-0.02em]">{title}</h2>
+          ) : (
+            <span />
+          )}
           {action}
         </div>
       ) : null}
@@ -85,7 +94,7 @@ export function MetaChip({
   children: ReactNode;
 }) {
   return (
-    <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-white/85 bg-white/82 px-2.5 text-xs font-medium text-muted-foreground shadow-low">
+    <span className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-background px-3 text-xs font-medium text-muted-foreground">
       {Icon ? <Icon className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden /> : null}
       <span className="tabular-nums">{children}</span>
     </span>

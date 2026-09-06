@@ -86,14 +86,16 @@ function ReflectionScreen() {
         <section>
           <SectionTitle className="mb-2.5 block">Факты месяца</SectionTitle>
           {facts.length ? (
-            <Card className="divide-y divide-white/75 overflow-hidden">
+            <Card className="divide-y divide-border/60 overflow-hidden">
               {facts.map((fact) => (
                 <div
                   key={fact.action.id}
-                  className="flex items-baseline justify-between gap-3 px-4 py-3"
+                  className="flex items-center justify-between gap-3 px-4 py-4"
                 >
-                  <span className="text-base">{fact.action.name}</span>
-                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                  <span className="min-w-0 break-words text-base font-medium">
+                    {fact.action.name}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1.5 text-xs font-semibold tabular-nums text-primary">
                     {fact.completed} из {fact.planned}
                   </span>
                 </div>

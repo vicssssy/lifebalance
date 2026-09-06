@@ -42,7 +42,7 @@ export function WeekdayPicker({
             }
             className={`flex h-11 flex-1 items-center justify-center rounded-[18px] border text-sm font-semibold transition-[background-color,border-color,color,transform,box-shadow] duration-200 active:scale-95 ${
               active
-                ? "border-primary bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_8px_20px_rgb(83_62_224_/_0.26)]"
+                ? "accent-control border-primary"
                 : "border-transparent bg-white/60 text-muted-foreground"
             }`}
           >
@@ -119,9 +119,11 @@ export function DayPicker({
                     : [key],
                 )
               }
-              className={`flex h-10 items-center justify-center rounded-[14px] text-base transition-[background-color,color,transform,box-shadow] duration-200 active:scale-95 ${
+              aria-pressed={selected}
+              aria-label={formatDayShort(date)}
+              className={`focus-ring flex h-11 items-center justify-center rounded-full text-base tabular-nums transition-[background-color,color,transform,box-shadow] duration-200 active:scale-95 ${
                 selected
-                  ? "bg-[linear-gradient(145deg,#725cff,#5038db)] font-semibold text-primary-foreground shadow-[0_8px_18px_rgb(83_62_224_/_0.26)]"
+                  ? "accent-control font-semibold"
                   : otherMonth
                     ? "text-hint"
                     : key === today
@@ -161,7 +163,7 @@ export function TimeField({
         type="time"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className="content-surface flex-1 rounded-[22px] px-4 py-3 text-base focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
+        className="inset-field min-w-0 flex-1 rounded-[18px] px-4 py-3 text-[16px] focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/25"
       />
       {value ? (
         <button
@@ -217,7 +219,7 @@ export function LifeAreaPicker({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="control-glass inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-primary/75"
+            className="control-glass focus-ring inline-flex min-h-11 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-primary"
           >
             <Plus className="size-3.5" /> Добавить сферу
           </button>
@@ -322,7 +324,7 @@ export function AttachmentsField({
                 onClick={() => setType(t)}
                 className={`flex-1 rounded-[14px] border py-2 text-sm font-semibold transition-colors ${
                   type === t
-                    ? "border-primary bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-low"
+                    ? "accent-control border-primary"
                     : "border-transparent bg-white/42 text-muted-foreground"
                 }`}
               >
@@ -363,7 +365,7 @@ export function AttachmentsField({
                 setUrl("");
                 setTitle("");
               }}
-              className="flex-1 rounded-[18px] bg-[linear-gradient(145deg,#725cff,#5038db)] py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_rgb(83_62_224_/_0.28)] disabled:opacity-40"
+              className="accent-control focus-ring min-h-11 flex-1 rounded-full py-2.5 text-sm font-semibold disabled:opacity-40"
             >
               Добавить
             </button>
@@ -373,7 +375,7 @@ export function AttachmentsField({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 text-base text-primary"
+          className="control-glass focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-primary"
         >
           <Plus className="size-4" /> Добавить видео / аудио / ссылку
         </button>

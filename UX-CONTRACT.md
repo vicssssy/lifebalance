@@ -73,6 +73,7 @@
 
 ## Navigation and responsive behavior
 
+- Visual pass 2026-09-06: nested headers and form save/next panels scroll in the document instead of covering fields on short phones. Bottom navigation remains fixed; route outcomes and form validation are unchanged.
 - ActionDetail: identity → explicit current occurrence → description/ritual → Goal → own motivation → materials → schedules → in-flow completion controls. No displayed `start_date`; creation/editing and domain cutoff remain unchanged.
 - ActionDetail requires explicit valid `date` and `scheduleId` resolved through `occurrencesForDate(..., "history")`; no fallback occurrence. Missing context shows the saved Action without execution controls.
 - Completing from ActionDetail stays on the same occurrence to expose the persisted completed button state. Other completion, skip, recurrence and move rules remain unchanged.

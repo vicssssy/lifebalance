@@ -63,10 +63,7 @@ function TodayDateHero({
           <span className="text-[66px] font-semibold leading-none tracking-[-0.065em] text-foreground">
             {date.getDate()}
           </span>
-          <span
-            className="mt-2 size-3 rounded-full bg-[linear-gradient(145deg,#765fff,#4f37dc)] shadow-[0_5px_14px_rgb(83_62_224_/_0.34)]"
-            aria-hidden
-          />
+          <span className="mt-2 size-3 rounded-full bg-primary" aria-hidden />
         </div>
         <div className="pt-1 text-right" aria-live="polite" aria-atomic="true">
           <p className="text-[17px] font-semibold leading-tight text-foreground">
@@ -89,7 +86,7 @@ function TodayDateHero({
               type="button"
               className={
                 selected
-                  ? "focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-[20px] border border-white/88 bg-secondary text-primary shadow-low transition-[background-color,color,transform] active:scale-95"
+                  ? "accent-control focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-full transition-[background-color,color,transform] active:scale-95"
                   : "focus-ring flex min-h-[64px] flex-col items-center justify-center rounded-[20px] text-muted-foreground transition-[background-color,color,transform] hover:bg-secondary/45 hover:text-foreground active:scale-95"
               }
               onClick={() => onSelect(dayKey)}

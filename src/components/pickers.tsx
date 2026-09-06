@@ -52,7 +52,7 @@ function Wheel({
             if (next !== value) onChange(next);
           }, 90);
         }}
-        className="h-[120px] snap-y snap-mandatory overflow-y-scroll overscroll-contain"
+        className="h-[120px] snap-y snap-mandatory overflow-x-hidden overflow-y-scroll overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{ scrollPaddingBlock: WHEEL_PADDING }}
       >
         <div style={{ height: WHEEL_PADDING }} />
@@ -161,7 +161,7 @@ export function PickerSheet({
           <button
             type="button"
             onClick={onSubmit}
-            className="focus-ring touch-target flex-1 rounded-[18px] bg-[linear-gradient(145deg,#725cff,#5038db)] py-3 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3)] transition-[transform,box-shadow] duration-200 active:scale-[0.98]"
+            className="accent-control focus-ring touch-target flex-1 rounded-full py-3 text-sm font-semibold transition-[transform,box-shadow] duration-200 active:scale-[0.98]"
           >
             {submitLabel}
           </button>

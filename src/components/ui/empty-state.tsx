@@ -24,7 +24,7 @@ export function EmptyState({
       )}
     >
       {Icon ? (
-        <span className="flex size-12 items-center justify-center rounded-full bg-[linear-gradient(145deg,#755fff,#5038db)] text-primary-foreground shadow-[0_12px_26px_rgb(83_62_224_/_0.28)]">
+        <span className="flex size-14 items-center justify-center rounded-[20px] bg-secondary text-primary">
           <Icon className="size-5" strokeWidth={1.75} />
         </span>
       ) : null}

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /** Поле ввода: 44px тач-таргет, rounded-xl, тонкая граница, аккуратный focus-ring. */
 const inputBase = [
-  "content-surface flex w-full rounded-[22px] px-4 text-[16px] text-foreground",
+  "inset-field flex w-full rounded-[18px] px-4 text-[16px] text-foreground",
   "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
   "placeholder:text-hint",
   "hover:border-primary/20",

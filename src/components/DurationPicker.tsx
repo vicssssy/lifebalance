@@ -20,7 +20,7 @@ export function DurationPicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="content-surface focus-ring w-full rounded-[22px] px-4 py-3 text-left text-base transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/20 hover:bg-white"
+        className="inset-field focus-ring min-h-11 w-full rounded-[18px] px-4 py-3 text-left text-[16px] transition-[border-color,box-shadow,background-color] duration-200 hover:border-primary/20 hover:bg-white"
       >
         {label ? (
           <span className="text-foreground">{label}</span>

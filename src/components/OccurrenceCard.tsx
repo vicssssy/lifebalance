@@ -70,7 +70,7 @@ export function OccurrenceCard({
     >
       <div className="relative flex min-h-full flex-col items-center justify-center py-1">
         <span
-          className="flex size-11 items-center justify-center rounded-[18px] border border-white/65 bg-[linear-gradient(145deg,#735cff,#5038dc)] text-primary-foreground shadow-[0_10px_24px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.28)]"
+          className="flex size-11 items-center justify-center rounded-[16px] border border-white bg-secondary text-primary shadow-low"
           aria-hidden
         >
           <ActionIcon className="size-[19px]" strokeWidth={1.8} />
@@ -93,7 +93,7 @@ export function OccurrenceCard({
           to="/action/$actionId"
           params={{ actionId: action.id }}
           search={{ date, scheduleId: occurrence.schedule.id, edit: undefined }}
-          className="focus-ring min-w-0 flex-1 rounded-[26px] px-3.5 py-3"
+          className="focus-ring min-w-0 flex-1 rounded-[26px] px-3.5 py-4"
         >
           <p className="text-[11px] font-semibold tracking-[0.01em] text-primary">
             {ACTION_FORMAT_NAME[action.type]}
