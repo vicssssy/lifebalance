@@ -1,12 +1,14 @@
 import { z } from "zod";
 import type { CloudWorkspacePayload, LegacyWorkspaceSnapshot } from "./types";
-import type { PlannerRecords } from "@/domain/occurrences";
+import { occurrencesForDate, type PlannerRecords } from "@/domain/occurrences";
 import type {
   Action,
   Attachment,
   Completion,
   Goal,
   LifeArea,
+  Occurrence,
+  OccurrenceOverride,
   Reflection,
   RitualItem,
   RitualItemCompletion,
@@ -273,6 +275,17 @@ const operationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("updateRitualItem"), itemId: id, patch: ritualPatchSchema }),
   z.object({ type: z.literal("reorderRitualItems"), orderedIds: z.array(id).min(1).max(1_000) }),
   z.object({ type: z.literal("updateSchedule"), scheduleId: id, patch: schedulePatchSchema }),
+  z.object({
+    type: z.literal("rescheduleOccurrence"),
+    scheduleId: id,
+    fromDate: dateKey,
+    date: dateKey,
+    startTime: z
+      .string()
+      .regex(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/)
+      .nullable(),
+    durationSeconds: nullableNumber,
+  }),
   z.object({
     type: z.literal("setCompletion"),
     actionId: id,
@@ -625,6 +638,11 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
         "SELECT id, action_id, type, url, title FROM attachments WHERE workspace_id = ? AND archived_at IS NULL",
       )
       .bind(workspaceId),
+    db
+      .prepare(
+        "SELECT schedule_id, original_date, target_date, start_time, duration_seconds FROM occurrence_overrides WHERE workspace_id = ?",
+      )
+      .bind(workspaceId),
   ]);
   const rows = (index: number): Record<string, unknown>[] =>
     (results[index]?.results ?? []) as Record<string, unknown>[];
@@ -635,6 +653,7 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
   const source: PlannerRecords = {
     actions: rows(2) as unknown as Action[],
     schedules,
+    occurrenceOverrides: (results[10]?.results ?? []) as OccurrenceOverride[],
     completions: rows(4) as unknown as Completion[],
     ritualItems: rows(5) as unknown as RitualItem[],
     ritualItemCompletions: rows(6) as unknown as RitualItemCompletion[],
@@ -662,6 +681,72 @@ async function assertOwned(
     .first();
   if (!row)
     throw new WorkspaceRequestError("Запись не найдена в текущем рабочем пространстве.", 404);
+}
+
+function validOccurrenceDate(value: string): boolean {
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+async function editableOccurrence(
+  db: D1Database,
+  workspaceId: string,
+  scheduleId: string,
+  date: string,
+): Promise<Occurrence> {
+  if (!validOccurrenceDate(date)) throw new WorkspaceRequestError("Некорректная дата.", 400);
+  const workspace = await readWorkspace(db, workspaceId);
+  const occurrence = occurrencesForDate(
+    { ...workspace.source, goals: workspace.goals },
+    date,
+    "active-plan",
+  ).find((item) => item.schedule.id === scheduleId);
+  if (!occurrence)
+    throw new WorkspaceRequestError(
+      "Это появление действия больше не запланировано. Обнови страницу.",
+      400,
+    );
+  return occurrence;
+}
+
+/** Called in the same transaction as the item write, never from client-side counts. */
+function ritualCompletionStatement(
+  db: D1Database,
+  workspaceId: string,
+  occurrence: Occurrence,
+  now: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `
+    INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status)
+    SELECT ?, ?, ?, ?, ?, CASE WHEN all_done THEN ? ELSE NULL END,
+      CASE WHEN all_done THEN 'completed' ELSE 'in_progress' END
+    FROM (
+      SELECT COUNT(*) > 0 AND COUNT(*) = SUM(EXISTS (
+        SELECT 1 FROM ritual_item_completions c
+        WHERE c.workspace_id = i.workspace_id AND c.ritual_item_id = i.id
+          AND c.schedule_id = ? AND c.occurrence_date = ?
+      )) AS all_done
+      FROM ritual_items i WHERE i.workspace_id = ? AND i.ritual_action_id = ? AND i.archived_at IS NULL
+    ) WHERE TRUE
+    ON CONFLICT (workspace_id, schedule_id, occurrence_date) DO UPDATE
+    SET completed_at = CASE WHEN completions.status = 'completed' AND excluded.status = 'completed'
+      THEN completions.completed_at ELSE excluded.completed_at END, status = excluded.status
+  `,
+    )
+    .bind(
+      crypto.randomUUID(),
+      workspaceId,
+      occurrence.action.id,
+      occurrence.schedule.id,
+      occurrence.originalDate,
+      now,
+      occurrence.schedule.id,
+      occurrence.originalDate,
+      workspaceId,
+      occurrence.action.id,
+    );
 }
 
 function updateStatement(
@@ -1036,13 +1121,36 @@ async function mutate(
 
       for (const schedule of draft.schedules) {
         if (schedule.id) {
+          // A moved once-only schedule still has one stable occurrence identity.
+          // The edit form displays its effective date; edit the override, not that identity.
+          if (schedule.repeat_type === "once") {
+            if (!schedule.scheduled_date || !validOccurrenceDate(schedule.scheduled_date))
+              throw new WorkspaceRequestError("Укажи дату расписания.", 400);
+            statements.push(
+              db
+                .prepare(
+                  "UPDATE occurrence_overrides SET target_date = ?, start_time = ?, duration_seconds = ? WHERE workspace_id = ? AND schedule_id = ?",
+                )
+                .bind(
+                  schedule.scheduled_date,
+                  schedule.start_time,
+                  schedule.duration_seconds,
+                  workspaceId,
+                  schedule.id,
+                ),
+            );
+          }
           statements.push(
             db
               .prepare(
-                "UPDATE schedules SET repeat_type = ?, scheduled_date = ?, weekdays_json = ?, start_time = ?, duration_seconds = ?, status = 'planned' WHERE id = ? AND workspace_id = ? AND action_id = ?",
+                "UPDATE schedules SET repeat_type = ?, scheduled_date = CASE WHEN ? = 'once' THEN COALESCE((SELECT original_date FROM occurrence_overrides WHERE workspace_id = ? AND schedule_id = ? LIMIT 1), ?) ELSE ? END, weekdays_json = ?, start_time = ?, duration_seconds = ?, status = 'planned' WHERE id = ? AND workspace_id = ? AND action_id = ?",
               )
               .bind(
                 schedule.repeat_type,
+                schedule.repeat_type,
+                workspaceId,
+                schedule.id,
+                schedule.scheduled_date,
                 schedule.scheduled_date,
                 JSON.stringify(schedule.weekdays),
                 schedule.start_time,
@@ -1146,13 +1254,82 @@ async function mutate(
         operation.patch,
       ).run();
       return null;
+    case "rescheduleOccurrence": {
+      const occurrence = await editableOccurrence(
+        db,
+        workspaceId,
+        operation.scheduleId,
+        operation.fromDate,
+      );
+      if (!validOccurrenceDate(operation.date) || operation.date < occurrence.action.start_date)
+        throw new WorkspaceRequestError(
+          "Дата переноса не может быть раньше даты начала действия.",
+          400,
+        );
+      // Guard the destination inside the write, including unmodified weekly occurrences.
+      // The unique index is a second guard for simultaneous moves to the same date.
+      const result = await db
+        .prepare(
+          `
+        INSERT INTO occurrence_overrides (workspace_id, schedule_id, original_date, target_date, start_time, duration_seconds)
+        SELECT ?, ?, ?, ?, ?, ?
+        WHERE NOT EXISTS (
+          SELECT 1 FROM occurrence_overrides WHERE workspace_id = ? AND schedule_id = ?
+            AND target_date = ? AND original_date <> ?
+        ) AND (? = ? OR NOT EXISTS (
+          SELECT 1 FROM schedules s WHERE s.workspace_id = ? AND s.id = ? AND s.status = 'planned'
+            AND ((s.repeat_type = 'once' AND s.scheduled_date = ?) OR
+              (s.repeat_type = 'weekly' AND EXISTS (
+                SELECT 1 FROM json_each(s.weekdays_json) WHERE value = ((CAST(strftime('%w', ?) AS INTEGER) + 6) % 7) + 1
+              )))
+            AND NOT EXISTS (SELECT 1 FROM occurrence_overrides o WHERE o.workspace_id = s.workspace_id
+              AND o.schedule_id = s.id AND o.original_date = ? AND o.target_date <> ?)
+        ))
+        ON CONFLICT (workspace_id, schedule_id, original_date) DO UPDATE
+          SET target_date = excluded.target_date, start_time = excluded.start_time, duration_seconds = excluded.duration_seconds
+      `,
+        )
+        .bind(
+          workspaceId,
+          operation.scheduleId,
+          occurrence.originalDate,
+          operation.date,
+          operation.startTime,
+          operation.durationSeconds,
+          workspaceId,
+          operation.scheduleId,
+          operation.date,
+          occurrence.originalDate,
+          operation.date,
+          occurrence.originalDate,
+          workspaceId,
+          operation.scheduleId,
+          operation.date,
+          operation.date,
+          operation.date,
+          operation.date,
+        )
+        .run();
+      if (!result.meta.changes)
+        throw new WorkspaceRequestError(
+          "На эту дату уже запланировано это действие. Выбери другую дату.",
+          400,
+        );
+      return null;
+    }
     case "setCompletion": {
-      const schedule = await db
-        .prepare("SELECT action_id FROM schedules WHERE id = ? AND workspace_id = ?")
-        .bind(operation.scheduleId, workspaceId)
-        .first<{ action_id: string }>();
-      if (!schedule || schedule.action_id !== operation.actionId)
+      const occurrence = await editableOccurrence(
+        db,
+        workspaceId,
+        operation.scheduleId,
+        operation.date,
+      );
+      if (occurrence.action.id !== operation.actionId)
         throw new WorkspaceRequestError("Расписание не принадлежит выбранному действию.", 400);
+      if (occurrence.action.type === "ritual" && operation.status === "completed") {
+        await ritualCompletionStatement(db, workspaceId, occurrence, now).run();
+        return null;
+      }
       await db
         .prepare(
           "INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (workspace_id, schedule_id, occurrence_date) DO UPDATE SET action_id = excluded.action_id, completed_at = excluded.completed_at, status = excluded.status",
@@ -1162,34 +1339,50 @@ async function mutate(
           workspaceId,
           operation.actionId,
           operation.scheduleId,
-          operation.date,
+          occurrence.originalDate,
           operation.status === "completed" ? now : null,
           operation.status,
         )
         .run();
       return null;
     }
-    case "removeCompletion":
+    case "removeCompletion": {
+      const occurrence = await editableOccurrence(
+        db,
+        workspaceId,
+        operation.scheduleId,
+        operation.date,
+      );
+      if (occurrence.action.type === "ritual") {
+        await ritualCompletionStatement(db, workspaceId, occurrence, now).run();
+        return null;
+      }
       await db
         .prepare(
-          "DELETE FROM completions WHERE workspace_id = ? AND schedule_id = ? AND occurrence_date = ?",
+          "UPDATE completions SET status = 'in_progress', completed_at = NULL WHERE workspace_id = ? AND schedule_id = ? AND occurrence_date = ?",
         )
-        .bind(workspaceId, operation.scheduleId, operation.date)
+        .bind(workspaceId, operation.scheduleId, occurrence.originalDate)
         .run();
       return null;
+    }
     case "setRitualItemCompletion": {
+      const occurrence = await editableOccurrence(
+        db,
+        workspaceId,
+        operation.scheduleId,
+        operation.date,
+      );
       const item = await db
-        .prepare("SELECT id FROM ritual_items WHERE id = ? AND workspace_id = ?")
-        .bind(operation.ritualItemId, workspaceId)
+        .prepare(
+          "SELECT id FROM ritual_items WHERE id = ? AND workspace_id = ? AND ritual_action_id = ? AND archived_at IS NULL",
+        )
+        .bind(operation.ritualItemId, workspaceId, occurrence.action.id)
         .first();
-      const schedule = await db
-        .prepare("SELECT id FROM schedules WHERE id = ? AND workspace_id = ?")
-        .bind(operation.scheduleId, workspaceId)
-        .first();
-      if (!item || !schedule)
+      if (!item || occurrence.action.type !== "ritual")
         throw new WorkspaceRequestError("Пункт ритуала или расписание не найдено.", 404);
+      let itemStatement: D1PreparedStatement;
       if (operation.done) {
-        await db
+        itemStatement = db
           .prepare(
             "INSERT INTO ritual_item_completions (id, workspace_id, ritual_item_id, schedule_id, occurrence_date) VALUES (?, ?, ?, ?, ?) ON CONFLICT (workspace_id, ritual_item_id, schedule_id, occurrence_date) DO NOTHING",
           )
@@ -1198,17 +1391,16 @@ async function mutate(
             workspaceId,
             operation.ritualItemId,
             operation.scheduleId,
-            operation.date,
-          )
-          .run();
+            occurrence.originalDate,
+          );
       } else {
-        await db
+        itemStatement = db
           .prepare(
             "DELETE FROM ritual_item_completions WHERE workspace_id = ? AND ritual_item_id = ? AND schedule_id = ? AND occurrence_date = ?",
           )
-          .bind(workspaceId, operation.ritualItemId, operation.scheduleId, operation.date)
-          .run();
+          .bind(workspaceId, operation.ritualItemId, operation.scheduleId, occurrence.originalDate);
       }
+      await db.batch([itemStatement, ritualCompletionStatement(db, workspaceId, occurrence, now)]);
       return null;
     }
     case "saveReflection": {

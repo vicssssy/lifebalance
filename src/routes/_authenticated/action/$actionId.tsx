@@ -13,7 +13,12 @@ import {
 } from "iconoir-react";
 import { toast } from "sonner";
 import { fetchAttachments, updateActionConfiguration } from "@/data/actions";
-import { markActionCompleted, markActionSkipped, toggleRitualItem } from "@/data/completions";
+import {
+  markActionCompleted,
+  markActionSkipped,
+  toggleRitualItem,
+  unmarkActionCompleted,
+} from "@/data/completions";
 import { rescheduleAction } from "@/data/schedules";
 import { ACTION_FORMAT_NAME, WEEKDAYS } from "@/domain/constants";
 import {
@@ -76,9 +81,22 @@ function ActionDetail() {
         ) ?? null)
       : null;
   const action = source.actions.find((item) => item.id === actionId) ?? null;
-  const schedules = source.schedules.filter(
-    (item) => item.action_id === actionId && item.status === "planned",
-  );
+  const schedules = source.schedules
+    .filter((item) => item.action_id === actionId && item.status === "planned")
+    .map((entry) => {
+      const override =
+        entry.repeat_type === "once"
+          ? source.occurrenceOverrides?.find((item) => item.schedule_id === entry.id)
+          : undefined;
+      return override
+        ? {
+            ...entry,
+            scheduled_date: override.target_date,
+            start_time: override.start_time,
+            duration_seconds: override.duration_seconds,
+          }
+        : entry;
+    });
   const schedule = occurrence?.schedule ?? null;
   const { data: attachments = [] } = useQuery({
     queryKey: ["attachments", actionId],
@@ -103,7 +121,7 @@ function ActionDetail() {
       (item) =>
         item.ritual_item_id === itemId &&
         item.schedule_id === schedule?.id &&
-        item.occurrence_date === date,
+        item.occurrence_date === occurrence?.originalDate,
     );
   const doneCount = items.filter((item) => itemDone(item.id)).length;
 
@@ -113,10 +131,11 @@ function ActionDetail() {
   const skip = usePlannerMutation(() =>
     markActionSkipped({ actionId, scheduleId: schedule!.id, date }),
   );
+  const pause = usePlannerMutation(() => unmarkActionCompleted({ scheduleId: schedule!.id, date }));
   const move = usePlannerMutation(() =>
     rescheduleAction({
       scheduleId: schedule!.id,
-      repeatType: schedule!.repeat_type,
+      fromDate: date,
       date: moveDate,
       startTime: moveTime || null,
       durationSeconds: moveDuration,
@@ -129,14 +148,18 @@ function ActionDetail() {
       date,
       done: input.done,
     });
-    const nextDone = input.done ? doneCount + 1 : doneCount - 1;
-    if (items.length && nextDone >= items.length && !completed) {
-      await markActionCompleted({ actionId, scheduleId: schedule!.id, date });
-    }
   });
   const saveConfiguration = usePlannerMutation((values: ActionFormValues) =>
     updateActionConfiguration(actionId, values),
   );
+  const occurrencePending =
+    complete.isPending ||
+    skip.isPending ||
+    move.isPending ||
+    toggleItem.isPending ||
+    pause.isPending;
+  const mutationError = (error: unknown) =>
+    toast.error(error instanceof Error ? error.message : "Не удалось сохранить");
 
   if (isLoading) {
     return (
@@ -282,11 +305,11 @@ function ActionDetail() {
               <p className="text-base font-semibold">
                 <time dateTime={date}>{formatDayLong(fromDateKey(date))}</time>
               </p>
-              {schedule?.start_time || formatDuration(durationSeconds) ? (
+              {occurrence.startTime || formatDuration(durationSeconds) ? (
                 <div className="flex flex-wrap gap-2">
-                  {schedule?.start_time ? (
+                  {occurrence.startTime ? (
                     <MetaChip icon={Clock}>
-                      {timeLabel(schedule.start_time, durationSeconds)}
+                      {timeLabel(occurrence.startTime, durationSeconds)}
                     </MetaChip>
                   ) : null}
                   {formatDuration(durationSeconds) ? (
@@ -324,8 +347,13 @@ function ActionDetail() {
                     <div key={item.id} className="flex items-start gap-2 px-3">
                       <button
                         type="button"
-                        disabled={!schedule || !actionIsActive}
-                        onClick={() => toggleItem.mutate({ itemId: item.id, done: !done })}
+                        disabled={!schedule || !actionIsActive || occurrencePending}
+                        onClick={() =>
+                          toggleItem.mutate(
+                            { itemId: item.id, done: !done },
+                            { onError: mutationError },
+                          )
+                        }
                         aria-label={done ? "Снять отметку" : "Отметить пункт"}
                         aria-pressed={done}
                         className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-xl disabled:opacity-60"
@@ -444,9 +472,14 @@ function ActionDetail() {
                 variant={completed ? "occurrenceCompleted" : "primary"}
                 aria-label={completed ? "✓ Выполнено" : "Выполнено"}
                 loading={complete.isPending}
+                disabled={
+                  occurrencePending ||
+                  (action.type === "ritual" && (!items.length || doneCount < items.length))
+                }
                 onClick={() =>
                   complete.mutate(undefined as never, {
                     onSuccess: () => toast.success("Выполнено"),
+                    onError: mutationError,
                   })
                 }
               >
@@ -456,12 +489,14 @@ function ActionDetail() {
                 <Button
                   variant="outline"
                   loading={skip.isPending}
+                  disabled={occurrencePending}
                   onClick={() =>
                     skip.mutate(undefined as never, {
                       onSuccess: () => {
                         toast.success("Пропущено");
                         navigate({ to: "/today" });
                       },
+                      onError: mutationError,
                     })
                   }
                 >
@@ -469,9 +504,10 @@ function ActionDetail() {
                 </Button>
                 <Button
                   variant="outline"
+                  disabled={occurrencePending}
                   onClick={() => {
                     setMoveDate(date);
-                    setMoveTime(schedule.start_time?.slice(0, 5) ?? "");
+                    setMoveTime(occurrence?.startTime?.slice(0, 5) ?? "");
                     setMoveDuration(durationSeconds);
                     setMoveOpen(true);
                   }}
@@ -483,9 +519,15 @@ function ActionDetail() {
                 <Button
                   variant="ghost"
                   className="w-full"
+                  disabled={occurrencePending}
                   onClick={() => {
-                    toast.success(`Прогресс сохранён: ${doneCount} из ${items.length}`);
-                    navigate({ to: "/today" });
+                    pause.mutate(undefined as never, {
+                      onSuccess: () => {
+                        toast.success(`Прогресс сохранён: ${doneCount} из ${items.length}`);
+                        navigate({ to: "/today" });
+                      },
+                      onError: mutationError,
+                    });
                   }}
                 >
                   <Undo2 aria-hidden /> Вернусь позже
@@ -501,12 +543,14 @@ function ActionDetail() {
         onCancel={() => setMoveOpen(false)}
         submitLabel="Перенести"
         onSubmit={() => {
-          setMoveOpen(false);
+          if (occurrencePending) return;
           move.mutate(undefined as never, {
             onSuccess: () => {
+              setMoveOpen(false);
               toast.success("Перенесено");
               navigate({ to: "/today" });
             },
+            onError: mutationError,
           });
         }}
       >

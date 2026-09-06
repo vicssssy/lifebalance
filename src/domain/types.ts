@@ -67,6 +67,15 @@ export interface Completion {
   status: "completed" | "in_progress" | "skipped";
 }
 
+/** Перенос одного появления. Исходная дата — неизменный ключ его истории. */
+export interface OccurrenceOverride {
+  schedule_id: string;
+  original_date: string;
+  target_date: string;
+  start_time: string | null;
+  duration_seconds: number | null;
+}
+
 export interface RitualItemCompletion {
   id: string;
   ritual_item_id: string;
@@ -100,6 +109,7 @@ export interface Occurrence {
   actionActive: boolean;
   schedule: Schedule;
   date: string;
+  originalDate: string;
   startTime: string | null;
   durationSeconds: number | null;
   completed: boolean;

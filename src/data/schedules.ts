@@ -21,15 +21,10 @@ export async function updateSchedule(
 
 export async function rescheduleAction(input: {
   scheduleId: string;
-  repeatType: "once" | "weekly";
+  fromDate: string;
   date: string;
   startTime: string | null;
   durationSeconds: number | null;
 }): Promise<void> {
-  const weekday = ((new Date(`${input.date}T00:00:00`).getDay() + 6) % 7) + 1;
-  await updateSchedule(input.scheduleId, {
-    ...(input.repeatType === "once" ? { scheduled_date: input.date } : { weekdays: [weekday] }),
-    start_time: input.startTime,
-    duration_seconds: input.durationSeconds,
-  });
+  await mutateCloudWorkspace({ type: "rescheduleOccurrence", ...input });
 }

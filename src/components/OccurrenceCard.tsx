@@ -117,8 +117,14 @@ export function OccurrenceCard({
 
         <button
           type="button"
-          aria-label={completed ? "Снять отметку выполнения" : "Отметить выполненным"}
-          aria-pressed={completed}
+          aria-label={
+            action.type === "ritual"
+              ? "Открыть пункты ритуала"
+              : completed
+                ? "Снять отметку выполнения"
+                : "Отметить выполненным"
+          }
+          aria-pressed={action.type === "ritual" ? undefined : completed}
           onClick={() => onToggle?.(occurrence, !completed)}
           disabled={!onToggle}
           className="focus-ring touch-target mr-0.5 flex shrink-0 items-center justify-center rounded-full"
@@ -127,7 +133,7 @@ export function OccurrenceCard({
             className={cn(
               "flex size-8 items-center justify-center rounded-full border-2 transition-[background-color,border-color,transform] duration-200",
               completed
-                ? "border-primary bg-primary text-primary-foreground"
+                ? "border-occurrence-completed bg-occurrence-completed text-foreground"
                 : skipped
                   ? "border-border bg-secondary text-muted-foreground"
                   : "border-[#d5d8e6] bg-white text-transparent shadow-[inset_0_1px_2px_rgb(34_32_70_/_0.05)]",

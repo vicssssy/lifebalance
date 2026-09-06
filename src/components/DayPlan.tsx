@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   DndContext,
   PointerSensor,
@@ -13,7 +14,7 @@ import { CalendarPlus, CircleSpark, CloudSunny, HalfMoon, SunLight } from "icono
 import type { AppIcon } from "@/components/ui/icon";
 import { toast } from "sonner";
 import { markActionCompleted, unmarkActionCompleted } from "@/data/completions";
-import { updateSchedule } from "@/data/schedules";
+import { rescheduleAction } from "@/data/schedules";
 import { DAY_PARTS, type DayPart } from "@/domain/constants";
 import { groupByDayPart } from "@/domain/occurrences";
 import { dayPartFor } from "@/domain/schedule";
@@ -109,6 +110,7 @@ export function DayPlan({
   maxTitleLines?: 2;
 }) {
   const [dragging, setDragging] = useState(false);
+  const navigate = useNavigate();
   const displayedOccurrences = occurrences;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -128,8 +130,14 @@ export function DayPlan({
         });
   });
 
-  const move = usePlannerMutation((input: { scheduleId: string; startTime: string | null }) =>
-    updateSchedule(input.scheduleId, { start_time: input.startTime }),
+  const move = usePlannerMutation((input: { occurrence: Occurrence; startTime: string | null }) =>
+    rescheduleAction({
+      scheduleId: input.occurrence.schedule.id,
+      fromDate: input.occurrence.date,
+      date: input.occurrence.date,
+      startTime: input.startTime,
+      durationSeconds: input.occurrence.durationSeconds,
+    }),
   );
 
   const grouped = groupByDayPart(displayedOccurrences);
@@ -146,7 +154,15 @@ export function DayPlan({
   }
 
   const handleToggle = (occurrence: Occurrence, next: boolean) => {
-    if (!occurrence.actionActive) return;
+    if (!occurrence.actionActive || toggle.isPending || move.isPending) return;
+    if (occurrence.action.type === "ritual") {
+      navigate({
+        to: "/action/$actionId",
+        params: { actionId: occurrence.action.id },
+        search: { date: occurrence.date, scheduleId: occurrence.schedule.id, edit: undefined },
+      });
+      return;
+    }
     toggle.mutate(
       { occurrence, next },
       {
@@ -163,10 +179,10 @@ export function DayPlan({
     if (!overId.startsWith("part:")) return;
     const target = overId.slice(5) as DayPart;
     const occ = displayedOccurrences.find((o) => o.key === event.active.id);
-    if (!occ?.actionActive) return;
+    if (!occ?.actionActive || toggle.isPending || move.isPending) return;
     if (dayPartFor(occ.startTime) === target) return;
     move.mutate(
-      { scheduleId: occ.schedule.id, startTime: DAY_PART_TIME[target] },
+      { occurrence: occ, startTime: DAY_PART_TIME[target] },
       {
         onSuccess: () =>
           toast.success(

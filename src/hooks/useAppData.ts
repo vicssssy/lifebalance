@@ -44,6 +44,7 @@ export function usePlannerSource() {
   const source: OccurrenceSource = {
     actions: workspace.data?.source.actions ?? [],
     schedules: workspace.data?.source.schedules ?? [],
+    occurrenceOverrides: workspace.data?.source.occurrenceOverrides ?? [],
     completions: workspace.data?.source.completions ?? [],
     ritualItems: workspace.data?.source.ritualItems ?? [],
     ritualItemCompletions: workspace.data?.source.ritualItemCompletions ?? [],
@@ -58,9 +59,11 @@ export function usePlannerMutation<TInput, TResult>(fn: (input: TInput) => Promi
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspace });
-      queryClient.invalidateQueries({ queryKey: queryKeys.attachments });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.workspace }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.attachments }),
+      ]);
     },
   });
 }

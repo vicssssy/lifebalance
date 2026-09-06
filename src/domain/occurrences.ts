@@ -5,6 +5,7 @@ import type {
   Completion,
   Goal,
   Occurrence,
+  OccurrenceOverride,
   RitualItem,
   RitualItemCompletion,
   Schedule,
@@ -13,6 +14,7 @@ import type {
 export interface PlannerRecords {
   actions: Action[];
   schedules: Schedule[];
+  occurrenceOverrides?: OccurrenceOverride[];
   completions: Completion[];
   ritualItems: RitualItem[];
   ritualItemCompletions: RitualItemCompletion[];
@@ -55,14 +57,26 @@ export function occurrencesForDate(
   const result: Occurrence[] = [];
 
   for (const schedule of source.schedules) {
-    if (!scheduleHitsDate(schedule, dateKey)) continue;
+    if (schedule.status !== "planned") continue;
+    const overrides = (source.occurrenceOverrides ?? []).filter(
+      (item) => item.schedule_id === schedule.id,
+    );
+    const override = overrides.find((item) => item.target_date === dateKey);
+    if (
+      !override &&
+      ((schedule.repeat_type === "once" && overrides.length > 0) ||
+        overrides.some((item) => item.original_date === dateKey) ||
+        !scheduleHitsDate(schedule, dateKey))
+    )
+      continue;
+    const originalDate = override?.original_date ?? dateKey;
     const action = actionById.get(schedule.action_id);
     if (!action) continue;
     // Действие не появляется раньше своей даты начала.
     if (action.start_date && dateKey < action.start_date) continue;
 
     const completion = source.completions.find(
-      (item) => item.schedule_id === schedule.id && item.occurrence_date === dateKey,
+      (item) => item.schedule_id === schedule.id && item.occurrence_date === originalDate,
     );
 
     // Закрытая Goal сразу выключает действие из активного плана. Исторический режим
@@ -85,7 +99,7 @@ export function occurrencesForDate(
       }
     }
 
-    const completed = completion?.status === "completed";
+    let completed = completion?.status === "completed";
     const skipped = completion?.status === "skipped";
 
     let ritualProgress: Occurrence["ritualProgress"] = null;
@@ -96,20 +110,24 @@ export function occurrencesForDate(
           (c) =>
             c.ritual_item_id === item.id &&
             c.schedule_id === schedule.id &&
-            c.occurrence_date === dateKey,
+            c.occurrence_date === originalDate,
         ),
       ).length;
       ritualProgress = { done, total: items.length };
+      completed = completed && items.length > 0 && done === items.length;
     }
 
     result.push({
-      key: `${schedule.id}:${dateKey}`,
+      key: `${schedule.id}:${originalDate}`,
       action,
       actionActive,
       schedule,
       date: dateKey,
-      startTime: schedule.start_time,
-      durationSeconds: schedule.duration_seconds ?? action.duration_seconds,
+      originalDate,
+      startTime: override ? override.start_time : schedule.start_time,
+      durationSeconds:
+        (override ? override.duration_seconds : schedule.duration_seconds) ??
+        action.duration_seconds,
       completed,
       skipped,
       ritualProgress,

@@ -168,6 +168,12 @@ for (const type of types) {
       assert.ok(text(tree).includes("8 сентября"));
     }
     assert.equal(completeButton(tree).props.variant, "primary");
+    if (type === "ritual") {
+      assert.equal(completeButton(tree).props.disabled, true);
+      source.ritualItemCompletions = [
+        { ritual_item_id: "i", schedule_id: "s", occurrence_date: "2026-09-06" },
+      ];
+    }
     await completeButton(tree).props.onClick();
     // Remount with a reloaded stored snapshot; no component-local completion flag.
     const reopened = harness(JSON.parse(JSON.stringify(source)))();
@@ -223,4 +229,27 @@ test("approved completed color is one shared Button token", () => {
   const button = fs.readFileSync(path.join(root, "src/components/ui/button.tsx"), "utf8");
   assert.match(css, /--color-occurrence-completed:\s*#c8ea54/i);
   assert.match(button, /occurrenceCompleted:[\s\S]*?bg-occurrence-completed/);
+});
+
+test("moved once-only schedule displays and edits its effective date and time", () => {
+  const source = fixture("task");
+  source.occurrenceOverrides = [
+    {
+      schedule_id: "s",
+      original_date: "2026-09-06",
+      target_date: "2026-09-08",
+      start_time: "12:30",
+      duration_seconds: 900,
+    },
+  ];
+  const search = { date: "2026-09-08", scheduleId: "s" };
+  const tree = harness(source, search)();
+  assert.ok(text(tree).includes("8 сентября"));
+  assert.ok(!text(tree).includes("6 сентября"));
+  assert.ok(text(tree).includes("12:30"));
+  const form = nodes(harness(source, { ...search, edit: true })()).find(
+    (n) => n.type === "ActionForm",
+  );
+  assert.equal(form.props.initial.schedules[0].scheduled_date, "2026-09-08");
+  assert.equal(form.props.initial.schedules[0].start_time, "12:30");
 });

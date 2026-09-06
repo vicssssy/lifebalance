@@ -123,6 +123,14 @@ export type CloudWorkspaceOperation =
       >;
     }
   | {
+      type: "rescheduleOccurrence";
+      scheduleId: string;
+      fromDate: string;
+      date: string;
+      startTime: string | null;
+      durationSeconds: number | null;
+    }
+  | {
       type: "setCompletion";
       actionId: string;
       scheduleId: string;
