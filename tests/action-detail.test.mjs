@@ -151,6 +151,15 @@ for (const type of types) {
       "Расписание",
     ]);
     assert.ok(text(tree).includes("Смысл действия"));
+    for (const section of nodes(tree).filter((n) => n.type === "Section")) {
+      const card = section.props.children;
+      assert.ok(card.props.className.includes("content-surface"), section.props.title);
+      assert.ok(card.props.className.includes("rounded-[24px]"), section.props.title);
+      if (["Описание", "Моя цель", "Почему это важно"].includes(section.props.title)) {
+        assert.equal(card.props.className, "content-surface rounded-[24px] px-4 py-3.5");
+        assert.ok(card.props.children.props.className.includes("break-words"));
+      }
+    }
     assert.ok(!text(tree).includes("Смысл цели"));
     assert.ok(!text(tree).includes("1 августа"));
     assert.ok(

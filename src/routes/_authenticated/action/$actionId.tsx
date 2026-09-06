@@ -334,7 +334,11 @@ function ActionDetail() {
 
           {description ? (
             <Section title="Описание">
-              <p className="whitespace-pre-wrap text-base leading-relaxed">{description}</p>
+              <div className="content-surface rounded-[24px] px-4 py-3.5">
+                <p className="whitespace-pre-wrap break-words text-base leading-relaxed">
+                  {description}
+                </p>
+              </div>
             </Section>
           ) : null}
 
@@ -344,7 +348,7 @@ function ActionDetail() {
                 {items.map((item) => {
                   const done = itemDone(item.id);
                   return (
-                    <div key={item.id} className="flex items-start gap-2 px-3">
+                    <div key={item.id} className="flex items-start gap-2 px-4">
                       <button
                         type="button"
                         disabled={!schedule || !actionIsActive || occurrencePending}
@@ -371,7 +375,7 @@ function ActionDetail() {
                           ) : null}
                         </span>
                       </button>
-                      <div className="min-w-0 flex-1 py-3">
+                      <div className="min-w-0 flex-1 break-words py-3.5">
                         <p
                           className={cn("text-base", done && "text-muted-foreground line-through")}
                         >
@@ -393,14 +397,20 @@ function ActionDetail() {
           {goalResult ? (
             <Section title="Моя цель">
               <div className="content-surface rounded-[24px] px-4 py-3.5">
-                <p className="whitespace-pre-wrap text-base leading-relaxed">{goalResult}</p>
+                <p className="whitespace-pre-wrap break-words text-base leading-relaxed">
+                  {goalResult}
+                </p>
               </div>
             </Section>
           ) : null}
 
           {whyImportant ? (
             <Section title="Почему это важно">
-              <p className="whitespace-pre-wrap text-base leading-relaxed">{whyImportant}</p>
+              <div className="content-surface rounded-[24px] px-4 py-3.5">
+                <p className="whitespace-pre-wrap break-words text-base leading-relaxed">
+                  {whyImportant}
+                </p>
+              </div>
             </Section>
           ) : null}
 
