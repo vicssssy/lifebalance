@@ -12,6 +12,7 @@ colors:
   muted: "#72768A"
   border: "#E1E3EF"
   success: "#2F9C73"
+  occurrence-completed: "#C8EA54"
   danger: "#D55361"
 typography:
   sans:
@@ -83,6 +84,8 @@ components:
 Default — спокойная светлая поверхность; hover — небольшое изменение яркости; focus-visible — контрастное двойное кольцо; active — краткое сжатие; selected/current — primary tint плюс текст/иконка; disabled — снижение контраста без исчезновения; busy — стабильная геометрия и spinner; success/warning/error — семантическая иконка и текст. Skeleton не используется; загрузка показывается в зарезервированном app-owned блоке.
 
 ### Buttons and actions
+
+Утверждённое состояние выполненного occurrence на ActionDetail использует `occurrence-completed` (#C8EA54), тёмный текст и галочку. Runtime: `--color-occurrence-completed` → `Button` variant `occurrenceCompleted`; зеркало — `semantic.occurrenceCompleted`. Оно одинаково для всех пяти типов и не меняет общий `success`.
 
 Главное действие — насыщенный primary material. Secondary/outline — светлый стеклянный control material. Ghost используется только для малозначимых локальных действий. Деструктивное действие отделяется цветом и текстом. Иконки не заменяют accessible name.
 

@@ -15,6 +15,7 @@ export function ScreenHeader({
   title,
   subtitle,
   steps,
+  right,
   className,
 }: {
   onBack: () => void;
@@ -23,6 +24,7 @@ export function ScreenHeader({
   title?: ReactNode;
   subtitle?: ReactNode;
   steps?: { total: number; current: number };
+  right?: ReactNode;
   className?: string;
 }) {
   return (
@@ -40,6 +42,7 @@ export function ScreenHeader({
               <span>{backLabel}</span>
             </button>
             {steps ? <StepDots {...steps} /> : null}
+            {right}
           </div>
         </PageContainer>
       </div>

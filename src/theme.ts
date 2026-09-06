@@ -38,6 +38,7 @@ export const semantic = {
   mutedForeground: "#72768A",
   hint: "#9093A6",
   success: "#2F9C73",
+  occurrenceCompleted: "#C8EA54",
   destructive: "#D55361",
 } as const;
 

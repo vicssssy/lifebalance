@@ -22,6 +22,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        occurrenceCompleted: "bg-occurrence-completed text-foreground shadow-low hover:shadow-mid",
         default:
           "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-[0_12px_28px_rgb(83_62_224_/_0.3),inset_0_1px_0_rgb(255_255_255_/_0.25)] hover:-translate-y-px hover:shadow-high",
         primary:

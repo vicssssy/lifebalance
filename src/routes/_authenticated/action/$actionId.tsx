@@ -7,7 +7,6 @@ import {
   Clock,
   EditPencil,
   Hourglass,
-  MultiplePages as Layers,
   OpenNewWindow as ExternalLink,
   SkipNext as SkipForward,
   Undo as Undo2,
@@ -16,9 +15,11 @@ import { toast } from "sonner";
 import { fetchAttachments, updateActionConfiguration } from "@/data/actions";
 import { markActionCompleted, markActionSkipped, toggleRitualItem } from "@/data/completions";
 import { rescheduleAction } from "@/data/schedules";
-import { ACTION_FORMAT_NAME } from "@/domain/constants";
+import { ACTION_FORMAT_NAME, WEEKDAYS } from "@/domain/constants";
 import {
+  formatDayLong,
   formatDayShort,
+  toDateKey,
   formatDuration,
   formatTime,
   fromDateKey,
@@ -30,10 +31,11 @@ import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { DayPicker } from "@/components/planning";
 import { DurationWheels, PickerSheet } from "@/components/pickers";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { StickyActions } from "@/components/StickyActions";
+import { occurrencesForDate } from "@/domain/occurrences";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Divider, PageContainer, Section } from "@/components/ui/layout";
+import { MetaChip, PageContainer, Section } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/action/$actionId")({
@@ -53,50 +55,6 @@ export const Route = createFileRoute("/_authenticated/action/$actionId")({
   component: ActionDetail,
 });
 
-function CircleAction({
-  icon: Icon,
-  label,
-  onClick,
-  disabled,
-  variant = "default",
-}: {
-  icon: typeof Check;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  variant?: "default" | "primary";
-}) {
-  return (
-    <div className="flex w-14 flex-col items-center gap-1.5 min-[360px]:w-16">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        aria-label={label}
-        title={label}
-        className={cn(
-          "focus-ring flex size-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:opacity-60",
-          variant === "primary"
-            ? "bg-[linear-gradient(145deg,#725cff,#5038db)] text-primary-foreground shadow-mid"
-            : "control-glass text-foreground",
-        )}
-      >
-        <Icon className="size-5" strokeWidth={1.9} aria-hidden />
-      </button>
-      <span className="text-center text-xs leading-tight text-muted-foreground">{label}</span>
-    </div>
-  );
-}
-
-function MetaChip({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
-  return (
-    <span className="control-glass inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm font-medium text-foreground">
-      <Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} aria-hidden />
-      {children}
-    </span>
-  );
-}
-
 function ActionDetail() {
   const { actionId } = Route.useParams();
   const search = Route.useSearch();
@@ -108,18 +66,26 @@ function ActionDetail() {
   const [moveTime, setMoveTime] = useState("");
   const [moveDuration, setMoveDuration] = useState<number | null>(null);
 
-  const date = search.date ?? todayKey();
+  // An occurrence needs an explicit, valid date and its own schedule. Never guess.
+  const date = search.date ?? "";
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && toDateKey(fromDateKey(date)) === date;
+  const occurrence =
+    validDate && search.scheduleId
+      ? (occurrencesForDate(source, date, "history").find(
+          (item) => item.action.id === actionId && item.schedule.id === search.scheduleId,
+        ) ?? null)
+      : null;
   const action = source.actions.find((item) => item.id === actionId) ?? null;
   const schedules = source.schedules.filter(
     (item) => item.action_id === actionId && item.status === "planned",
   );
-  const schedule = schedules.find((item) => item.id === search.scheduleId) ?? schedules[0] ?? null;
+  const schedule = occurrence?.schedule ?? null;
   const { data: attachments = [] } = useQuery({
     queryKey: ["attachments", actionId],
     queryFn: () => fetchAttachments(actionId),
   });
   const items = source.ritualItems
-    .filter((item) => item.ritual_action_id === actionId)
+    .filter((item) => action?.type === "ritual" && item.ritual_action_id === actionId)
     .slice()
     .sort((left, right) => left.sort_order - right.sort_order);
   const actionAreaIds = source.actionLifeAreas
@@ -130,13 +96,9 @@ function ActionDetail() {
     .filter((area): area is NonNullable<typeof area> => Boolean(area));
   const goal = source.goals.find((item) => item.id === action?.goal_id) ?? null;
   const actionIsActive = !action?.goal_id || goal?.status === "active";
-  const completed = source.completions.some(
-    (item) =>
-      item.schedule_id === schedule?.id &&
-      item.occurrence_date === date &&
-      item.status === "completed",
-  );
+  const completed = occurrence?.completed ?? false;
   const itemDone = (itemId: string) =>
+    Boolean(occurrence) &&
     source.ritualItemCompletions.some(
       (item) =>
         item.ritual_item_id === itemId &&
@@ -256,63 +218,53 @@ function ActionDetail() {
     );
   }
 
-  const durationSeconds = schedule?.duration_seconds ?? action.duration_seconds;
-  const duration = formatDuration(durationSeconds);
-  const time = formatTime(schedule?.start_time ?? null);
+  const durationSeconds = occurrence?.durationSeconds ?? null;
+  const description = action.description?.trim();
+  const goalResult = goal?.result_text.trim();
+  const whyImportant = action.why_important?.trim();
+  const materials = attachments.filter((attachment) => attachment.url.trim());
+  const timeLabel = (start: string | null, seconds: number | null) => {
+    const time = formatTime(start);
+    if (!time || action.type !== "time_slot" || !seconds || seconds <= 0) return time;
+    const [hours = 0, minutes = 0, startSeconds = 0] = start!.split(":").map(Number);
+    const endSeconds = hours * 3600 + minutes * 60 + startSeconds + seconds;
+    const days = Math.floor(endSeconds / 86400);
+    const end = `${String(Math.floor(endSeconds / 3600) % 24).padStart(2, "0")}:${String(Math.floor(endSeconds / 60) % 60).padStart(2, "0")}`;
+    const exactEnd = endSeconds % 60 ? `${end}:${String(endSeconds % 60).padStart(2, "0")}` : end;
+    return `${time}–${exactEnd}${days ? ` (+${days} дн.)` : ""}`;
+  };
+  const progress = items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined;
 
   return (
-    <div className="app-screen min-h-dvh bg-background pb-28">
-      <ScreenHeader onBack={() => navigate({ to: "/today" })} backLabel="К плану" />
-
-      <main className="animate-rise pt-2">
-        <PageContainer className="space-y-8">
-          <section className="space-y-3.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>
-                {completed ? (
-                  <Badge variant="default">
-                    <Check className="size-3.5" strokeWidth={2.25} aria-hidden />
-                    Выполнено
-                  </Badge>
-                ) : null}
-              </div>
-              {actionIsActive ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate({
-                      to: "/action/$actionId",
-                      params: { actionId },
-                      search: { date: search.date, scheduleId: search.scheduleId, edit: true },
-                    })
-                  }
-                  className="focus-ring inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-[linear-gradient(145deg,#725cff,#5038db)] px-4 text-sm font-semibold text-primary-foreground shadow-mid"
-                >
-                  <EditPencil className="size-4" aria-hidden />
-                  Изменить
-                </button>
-              ) : null}
-            </div>
-
+    <div className="app-screen min-h-dvh bg-background pb-36">
+      <ScreenHeader
+        onBack={() => navigate({ to: "/today" })}
+        backLabel="К плану"
+        right={
+          actionIsActive ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                navigate({
+                  to: "/action/$actionId",
+                  params: { actionId },
+                  search: { date: search.date, scheduleId: search.scheduleId, edit: true },
+                })
+              }
+            >
+              <EditPencil aria-hidden /> Изменить
+            </Button>
+          ) : undefined
+        }
+      />
+      <main className="animate-rise pt-5">
+        <PageContainer className="space-y-7 break-words">
+          <section className="space-y-3">
+            <Badge variant="muted">{ACTION_FORMAT_NAME[action.type]}</Badge>
             <h1 className="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]">
               {action.name}
             </h1>
-
-            <div
-              role="region"
-              aria-label="Параметры действия"
-              tabIndex={0}
-              className="focus-ring -mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain rounded-xl px-1 py-2"
-            >
-              {time ? <MetaChip icon={Clock}>{time}</MetaChip> : null}
-              {duration ? <MetaChip icon={Hourglass}>{duration}</MetaChip> : null}
-              <MetaChip icon={Calendar}>
-                с {formatDayShort(fromDateKey(action.start_date))}
-              </MetaChip>
-              {items.length ? <MetaChip icon={Layers}>{items.length} пункта</MetaChip> : null}
-            </div>
-
             {actionAreas.length ? (
               <div className="flex flex-wrap gap-x-3 gap-y-1">
                 {actionAreas.map((area) => (
@@ -322,138 +274,188 @@ function ActionDetail() {
             ) : null}
           </section>
 
-          {goal ? (
-            <>
-              <Divider />
-              <Section title="Моя цель">
-                <div className="content-surface rounded-[24px] px-4 py-3.5">
-                  <p className="text-base leading-relaxed">{goal.result_text}</p>
+          {occurrence ? (
+            <section
+              aria-label="Текущее выполнение"
+              className="content-surface space-y-3 rounded-[24px] p-4"
+            >
+              <p className="text-base font-semibold">
+                <time dateTime={date}>{formatDayLong(fromDateKey(date))}</time>
+              </p>
+              {schedule?.start_time || formatDuration(durationSeconds) ? (
+                <div className="flex flex-wrap gap-2">
+                  {schedule?.start_time ? (
+                    <MetaChip icon={Clock}>
+                      {timeLabel(schedule.start_time, durationSeconds)}
+                    </MetaChip>
+                  ) : null}
+                  {formatDuration(durationSeconds) ? (
+                    <MetaChip icon={Hourglass}>{formatDuration(durationSeconds)}</MetaChip>
+                  ) : null}
                 </div>
-              </Section>
-            </>
+              ) : null}
+              {completed || occurrence.skipped || progress ? (
+                <div aria-live="polite" className="space-y-2">
+                  {completed ? (
+                    <Badge>
+                      <Check aria-hidden className="size-3.5" /> Выполнено
+                    </Badge>
+                  ) : occurrence.skipped ? (
+                    <Badge variant="muted">Пропущено</Badge>
+                  ) : null}
+                  {progress ? <p className="text-sm text-muted-foreground">{progress}</p> : null}
+                </div>
+              ) : null}
+            </section>
           ) : null}
 
-          {action.description ? (
-            <>
-              <Divider />
-              <Section title="Описание">
-                <p className="text-base leading-relaxed">{action.description}</p>
-              </Section>
-            </>
+          {description ? (
+            <Section title="Описание">
+              <p className="whitespace-pre-wrap text-base leading-relaxed">{description}</p>
+            </Section>
           ) : null}
 
           {items.length ? (
-            <>
-              <Divider />
-              <Section title="Ритуал">
-                <div className="content-surface overflow-hidden rounded-[26px]">
-                  {items.map((item) => {
-                    const done = itemDone(item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex items-start gap-2 border-b border-white/75 px-3 last:border-b-0"
+            <Section title="Ритуал">
+              <div className="content-surface divide-y divide-border/60 overflow-hidden rounded-[24px]">
+                {items.map((item) => {
+                  const done = itemDone(item.id);
+                  return (
+                    <div key={item.id} className="flex items-start gap-2 px-3">
+                      <button
+                        type="button"
+                        disabled={!schedule || !actionIsActive}
+                        onClick={() => toggleItem.mutate({ itemId: item.id, done: !done })}
+                        aria-label={done ? "Снять отметку" : "Отметить пункт"}
+                        aria-pressed={done}
+                        className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-xl disabled:opacity-60"
                       >
-                        <button
-                          type="button"
-                          disabled={!schedule || !actionIsActive}
-                          onClick={() => toggleItem.mutate({ itemId: item.id, done: !done })}
-                          aria-label={done ? "Снять отметку" : "Отметить пункт"}
-                          className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-xl"
+                        <span
+                          className={cn(
+                            "flex size-5 items-center justify-center rounded-full",
+                            done
+                              ? "bg-primary text-primary-foreground"
+                              : "border border-border bg-secondary",
+                          )}
                         >
-                          <span
-                            className={cn(
-                              "flex size-5 items-center justify-center rounded-full",
-                              done
-                                ? "bg-primary text-primary-foreground"
-                                : "border border-border bg-secondary",
-                            )}
-                          >
-                            {done ? <Check className="size-3.5" strokeWidth={2.5} /> : null}
-                          </span>
-                        </button>
-                        <div className="min-w-0 flex-1 py-3">
-                          <p
-                            className={cn(
-                              "text-base",
-                              done && "text-muted-foreground line-through",
-                            )}
-                          >
-                            {item.name}
-                          </p>
-                          {item.description ? (
-                            <p className="mt-0.5 text-sm text-muted-foreground">
-                              {item.description}
-                            </p>
+                          {done ? (
+                            <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
                           ) : null}
-                        </div>
+                        </span>
+                      </button>
+                      <div className="min-w-0 flex-1 py-3">
+                        <p
+                          className={cn("text-base", done && "text-muted-foreground line-through")}
+                        >
+                          {item.name}
+                        </p>
+                        {item.description?.trim() ? (
+                          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                            {item.description.trim()}
+                          </p>
+                        ) : null}
                       </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            </>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
           ) : null}
 
-          {action.why_important ? (
-            <>
-              <Divider />
-              <Section title="Почему это важно">
-                <p className="text-base leading-relaxed">{action.why_important}</p>
-              </Section>
-            </>
+          {goalResult ? (
+            <Section title="Моя цель">
+              <div className="content-surface rounded-[24px] px-4 py-3.5">
+                <p className="whitespace-pre-wrap text-base leading-relaxed">{goalResult}</p>
+              </div>
+            </Section>
           ) : null}
 
-          {attachments.length ? (
-            <>
-              <Divider />
-              <Section title="Материалы">
-                <div className="content-surface overflow-hidden rounded-[26px]">
-                  {attachments.map((attachment, index) => (
-                    <a
-                      key={attachment.id}
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={cn(
-                        "focus-ring flex items-center justify-between gap-3 px-4 py-3 transition-colors duration-200 hover:bg-secondary/60",
-                        index > 0 && "border-t border-border/70",
-                      )}
-                    >
-                      <span className="min-w-0 truncate text-base">
-                        {attachment.title || attachment.url}
-                      </span>
-                      <ExternalLink className="size-4 shrink-0 text-muted-foreground" />
-                    </a>
-                  ))}
-                </div>
-              </Section>
-            </>
+          {whyImportant ? (
+            <Section title="Почему это важно">
+              <p className="whitespace-pre-wrap text-base leading-relaxed">{whyImportant}</p>
+            </Section>
+          ) : null}
+
+          {materials.length ? (
+            <Section title="Материалы">
+              <div className="content-surface divide-y divide-border/60 overflow-hidden rounded-[24px]">
+                {materials.map((attachment) => (
+                  <a
+                    key={attachment.id}
+                    href={attachment.url.trim()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="focus-ring flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-secondary/60"
+                  >
+                    <span className="min-w-0 break-words text-base">
+                      {attachment.title?.trim() || attachment.url.trim()}
+                    </span>
+                    <ExternalLink className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </a>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {schedules.some(
+            (entry) =>
+              entry.scheduled_date ||
+              entry.weekdays.length ||
+              entry.start_time ||
+              formatDuration(entry.duration_seconds ?? action.duration_seconds),
+          ) ? (
+            <Section title="Расписание">
+              <div className="content-surface divide-y divide-border/60 rounded-[24px] px-4">
+                {schedules.map((entry) => {
+                  const seconds = entry.duration_seconds ?? action.duration_seconds;
+                  const days =
+                    entry.repeat_type === "weekly"
+                      ? WEEKDAYS.filter((day) => entry.weekdays.includes(day.value))
+                          .map((day) => day.short)
+                          .join(", ")
+                      : entry.scheduled_date
+                        ? formatDayShort(fromDateKey(entry.scheduled_date))
+                        : "";
+                  const time = timeLabel(entry.start_time, seconds);
+                  const duration = formatDuration(seconds);
+                  if (!days && !time && !duration) return null;
+                  return (
+                    <div key={entry.id} className="space-y-1 py-3">
+                      {days ? <p className="text-base font-medium">{days}</p> : null}
+                      {time || duration ? (
+                        <p className="text-sm text-muted-foreground">
+                          {[time, duration].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
           ) : null}
 
           {schedule && actionIsActive ? (
-            <StickyActions
-              hint={items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined}
+            <section
+              aria-label="Управление выполнением"
+              className="space-y-3 border-t border-border/60 pt-5"
             >
-              <div className="flex items-start justify-center gap-2 min-[360px]:gap-5">
-                <CircleAction
-                  icon={Check}
-                  label="Выполнено"
-                  variant="primary"
-                  disabled={complete.isPending}
-                  onClick={() =>
-                    complete.mutate(undefined as never, {
-                      onSuccess: () => {
-                        toast.success("Выполнено");
-                        navigate({ to: "/today" });
-                      },
-                    })
-                  }
-                />
-                <CircleAction
-                  icon={SkipForward}
-                  label="Пропустить"
-                  disabled={skip.isPending}
+              <Button
+                size="lg"
+                variant={completed ? "occurrenceCompleted" : "primary"}
+                aria-label={completed ? "✓ Выполнено" : "Выполнено"}
+                loading={complete.isPending}
+                onClick={() =>
+                  complete.mutate(undefined as never, {
+                    onSuccess: () => toast.success("Выполнено"),
+                  })
+                }
+              >
+                <Check aria-hidden /> Выполнено
+              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  loading={skip.isPending}
                   onClick={() =>
                     skip.mutate(undefined as never, {
                       onSuccess: () => {
@@ -462,29 +464,34 @@ function ActionDetail() {
                       },
                     })
                   }
-                />
-                <CircleAction
-                  icon={Calendar}
-                  label="Перенести"
+                >
+                  <SkipForward aria-hidden /> Пропустить
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setMoveDate(date);
                     setMoveTime(schedule.start_time?.slice(0, 5) ?? "");
                     setMoveDuration(durationSeconds);
                     setMoveOpen(true);
                   }}
-                />
-                {items.length ? (
-                  <CircleAction
-                    icon={Undo2}
-                    label="Вернусь позже"
-                    onClick={() => {
-                      toast.success(`Прогресс сохранён: ${doneCount} из ${items.length}`);
-                      navigate({ to: "/today" });
-                    }}
-                  />
-                ) : null}
+                >
+                  <Calendar aria-hidden /> Перенести
+                </Button>
               </div>
-            </StickyActions>
+              {items.length && doneCount < items.length && !completed ? (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    toast.success(`Прогресс сохранён: ${doneCount} из ${items.length}`);
+                    navigate({ to: "/today" });
+                  }}
+                >
+                  <Undo2 aria-hidden /> Вернусь позже
+                </Button>
+              ) : null}
+            </section>
           ) : null}
         </PageContainer>
       </main>

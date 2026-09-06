@@ -73,6 +73,10 @@
 
 ## Navigation and responsive behavior
 
+- ActionDetail: identity → explicit current occurrence → description/ritual → Goal → own motivation → materials → schedules → in-flow completion controls. No displayed `start_date`; creation/editing and domain cutoff remain unchanged.
+- ActionDetail requires explicit valid `date` and `scheduleId` resolved through `occurrencesForDate(..., "history")`; no fallback occurrence. Missing context shows the saved Action without execution controls.
+- Completing from ActionDetail stays on the same occurrence to expose the persisted completed button state. Other completion, skip, recurrence and move rules remain unchanged.
+
 - Route document title policy: existing localized `{Page} — Путь`; root/not-found/error remain honest.
 - Route error / 403 page behavior: app-owned root not-found/error UI with route back to main; 403 not currently applicable.
 - Breadcrumb/tab/route-state policy: no breadcrumbs or in-page tabs; route search params stay canonical where already used.

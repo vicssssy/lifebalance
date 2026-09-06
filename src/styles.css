@@ -78,6 +78,7 @@
   --color-ring: var(--ring);
   --color-hint: var(--hint);
   --color-surface: var(--surface);
+  --color-occurrence-completed: #c8ea54;
 
   /* Тени: low / mid / high */
   --shadow-low: 0 4px 14px rgb(40 38 82 / 0.055);
