@@ -74,7 +74,8 @@ function CreateAction() {
           type={type}
           areas={areas}
           initial={{
-            whyImportant: search.resultText || null,
+            // Goal text is context only; this field belongs to the Action.
+            whyImportant: null,
             lifeAreaIds: search.lifeAreaId ? [search.lifeAreaId] : [],
           }}
           submitting={save.isPending}
