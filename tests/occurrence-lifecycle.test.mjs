@@ -130,12 +130,16 @@ async function workspace(t) {
       whyImportant: null,
     })
   ).data;
-  const create = async (type, weekly = ["ritual", "regular_action"].includes(type)) => {
+  const create = async (
+    type,
+    weekly = ["ritual", "regular_action"].includes(type),
+    goalId = goal.id,
+  ) => {
     const action = (
       await mutate({
         type: "createAction",
         draft: {
-          goalId: goal.id,
+          goalId,
           name: `Проверка ${type}`,
           type,
           description: null,
@@ -151,7 +155,9 @@ async function workspace(t) {
                   { name: "Второй", description: null },
                 ]
               : [],
-          attachments: [],
+          attachments: [
+            { type: "link", url: "https://example.com/shared-material", title: "Материал" },
+          ],
           schedules: [
             {
               repeat_type: weekly ? "weekly" : "once",
@@ -175,7 +181,7 @@ async function workspace(t) {
     occurrencesForDate({ ...data.source, goals: data.goals }, day, "history").filter(
       (o) => o.action.id === id,
     );
-  return { read, mutate, create, at, goal };
+  return { read, mutate, create, at, goal, db };
 }
 
 for (const type of actionTypes) {
@@ -465,3 +471,292 @@ for (const status of ["completed", "cancelled"]) {
     );
   });
 }
+
+const ownedTables = [
+  "goals",
+  "actions",
+  "schedules",
+  "completions",
+  "ritual_items",
+  "ritual_item_completions",
+  "attachments",
+  "action_life_areas",
+  "occurrence_overrides",
+];
+async function snapshot(db) {
+  const result = {};
+  for (const table of [...ownedTables, "life_areas", "reflections"])
+    result[table] = clone(
+      (await db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()).results,
+    );
+  return result;
+}
+
+for (const status of ["completed", "cancelled"]) {
+  test(`permanent deletion ${status}: all five owned graphs disappear, independent data/history remain`, async (t) => {
+    const { read, mutate, create, goal, db } = await workspace(t);
+    const independent = await create("ritual", true, null);
+    const otherGoal = (
+      await mutate({
+        type: "createGoal",
+        lifeAreaId: "body_health",
+        resultText: "Другая архивная цель",
+        whyImportant: null,
+      })
+    ).data;
+    const otherAction = await create("task", false, otherGoal.id);
+    await mutate({
+      type: "setCompletion",
+      actionId: otherAction.action.id,
+      scheduleId: otherAction.schedule.id,
+      date,
+      status: "completed",
+    });
+    await mutate({
+      type: "setGoalStatus",
+      goalId: otherGoal.id,
+      status: "cancelled",
+      closedOn: "2026-09-11",
+    });
+    await mutate({
+      type: "setRitualItemCompletion",
+      ritualItemId: independent.items[0].id,
+      scheduleId: independent.schedule.id,
+      date,
+      done: true,
+    });
+    await mutate({
+      type: "saveReflection",
+      month: "2026-09-01",
+      answers: { real_result: "Общий итог месяца; сохраняется независимо от цели" },
+    });
+    const owned = [];
+    for (const type of actionTypes) {
+      const row = await create(type);
+      owned.push(row);
+      if (type === "ritual")
+        await mutate({
+          type: "setRitualItemCompletion",
+          ritualItemId: row.items[0].id,
+          scheduleId: row.schedule.id,
+          date,
+          done: true,
+        });
+      else
+        await mutate({
+          type: "setCompletion",
+          actionId: row.action.id,
+          scheduleId: row.schedule.id,
+          date,
+          status: type === "task" ? "skipped" : "completed",
+        });
+    }
+    await mutate({
+      type: "rescheduleOccurrence",
+      scheduleId: owned[1].schedule.id,
+      fromDate: date,
+      date: "2026-09-10",
+      startTime: "09:00",
+      durationSeconds: 900,
+    });
+    await mutate({ type: "setGoalStatus", goalId: goal.id, status, closedOn: "2026-09-11" });
+    const ids = new Set(owned.map((row) => row.action.id));
+    const schedules = new Set(owned.map((row) => row.schedule.id));
+    const items = new Set(owned.flatMap((row) => row.items.map((item) => item.id)));
+    if (db) {
+      const { workspace_id: wid } = await db
+        .prepare("SELECT workspace_id FROM goals WHERE id = ?")
+        .bind(goal.id)
+        .first();
+      await db
+        .prepare(
+          "INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, status) VALUES (?, ?, ?, NULL, ?, 'completed')",
+        )
+        .bind(crypto.randomUUID(), wid, owned[2].action.id, "2026-09-01")
+        .run();
+      await db
+        .prepare(
+          "INSERT INTO ritual_item_completions (id, workspace_id, ritual_item_id, schedule_id, occurrence_date) VALUES (?, ?, ?, NULL, ?)",
+        )
+        .bind(crypto.randomUUID(), wid, owned[0].items[0].id, "2026-09-01")
+        .run();
+      await db
+        .prepare("UPDATE attachments SET archived_at = '2026-09-10' WHERE action_id = ?")
+        .bind(owned[0].action.id)
+        .run();
+    }
+    const before = await read();
+    const rawBefore = db ? await snapshot(db) : null;
+    const belongs = (table, row) =>
+      table === "goals"
+        ? row.id === goal.id
+        : table === "actions"
+          ? ids.has(row.id)
+          : table === "ritual_items"
+            ? ids.has(row.ritual_action_id)
+            : table === "ritual_item_completions"
+              ? items.has(row.ritual_item_id)
+              : table === "occurrence_overrides"
+                ? schedules.has(row.schedule_id)
+                : ids.has(row.action_id);
+    await mutate({ type: "deleteArchivedGoal", goalId: goal.id });
+    const after = await read(); // server reload, not optimistic UI
+    assert.deepEqual(clone(after.goals), clone(before.goals.filter((g) => g.id !== goal.id)));
+    assert.deepEqual(
+      clone(after.source.actions),
+      clone(before.source.actions.filter((a) => !ids.has(a.id))),
+    );
+    assert.deepEqual(clone(after.reflections), clone(before.reflections));
+    assert.equal(
+      after.source.schedules.some((s) => ids.has(s.action_id)),
+      false,
+    );
+    assert.equal(
+      after.source.completions.some((c) => ids.has(c.action_id)),
+      false,
+    );
+    assert.equal(
+      after.source.ritualItemCompletions.some((c) => items.has(c.ritual_item_id)),
+      false,
+    );
+    assert.equal(
+      after.source.occurrenceOverrides.some((o) => schedules.has(o.schedule_id)),
+      false,
+    );
+    const facts = (data) =>
+      clone(factsForRange({ ...data.source, goals: data.goals }, "2026-09-01", "2026-09-30"));
+    assert.deepEqual(
+      facts(after),
+      facts(before).filter((f) => !ids.has(f.action.id)),
+    );
+    if (db) {
+      const rawAfter = await snapshot(db);
+      for (const table of Object.keys(rawBefore))
+        assert.deepEqual(
+          rawAfter[table],
+          rawBefore[table].filter((row) => !belongs(table, row)),
+          table,
+        );
+      assert.equal((await db.prepare("PRAGMA foreign_key_check").all()).results.length, 0);
+    }
+    await mutate({ type: "deleteArchivedGoal", goalId: goal.id }, 404);
+  });
+}
+
+test("permanent deletion rejects active and unknown Goals without changing data", async (t) => {
+  const { read, mutate, create, goal, db } = await workspace(t);
+  await create("task");
+  const before = db ? await snapshot(db) : clone(await read());
+  await mutate({ type: "deleteArchivedGoal", goalId: goal.id }, 400);
+  await mutate({ type: "deleteArchivedGoal", goalId: crypto.randomUUID() }, 404);
+  assert.deepEqual(db ? await snapshot(db) : clone(await read()), before);
+});
+
+for (const ritual of [false, true])
+  for (const reverse of [false, true]) {
+    test(
+      `permanent deletion refuses cross-boundary ${ritual ? "ritual" : "completion"} history, direction ${reverse}`,
+      { skip: !!process.env.LIFEBALANCE_TEST_URL },
+      async (t) => {
+        const { mutate, create, goal, db } = await workspace(t);
+        const owned = await create("ritual");
+        const independent = await create("ritual", true, null);
+        await mutate({
+          type: "rescheduleOccurrence",
+          scheduleId: owned.schedule.id,
+          fromDate: date,
+          date: "2026-09-10",
+          startTime: "09:00",
+          durationSeconds: 900,
+        });
+        await mutate({
+          type: "setGoalStatus",
+          goalId: goal.id,
+          status: "completed",
+          closedOn: "2026-09-11",
+        });
+        const { workspace_id: wid } = await db
+          .prepare("SELECT workspace_id FROM goals WHERE id = ?")
+          .bind(goal.id)
+          .first();
+        const owner = reverse ? owned : independent,
+          scheduled = reverse ? independent : owned;
+        if (ritual)
+          await db
+            .prepare(
+              "INSERT INTO ritual_item_completions (id, workspace_id, ritual_item_id, schedule_id, occurrence_date) VALUES (?, ?, ?, ?, ?)",
+            )
+            .bind(crypto.randomUUID(), wid, owner.items[0].id, scheduled.schedule.id, date)
+            .run();
+        else
+          await db
+            .prepare(
+              "INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, status) VALUES (?, ?, ?, ?, ?, 'completed')",
+            )
+            .bind(crypto.randomUUID(), wid, owner.action.id, scheduled.schedule.id, date)
+            .run();
+        const before = await snapshot(db);
+        await mutate({ type: "deleteArchivedGoal", goalId: goal.id }, 400);
+        assert.deepEqual(await snapshot(db), before);
+      },
+    );
+  }
+
+test(
+  "permanent deletion is workspace-scoped and rolls back overrides on cascade failure",
+  { skip: !!process.env.LIFEBALANCE_TEST_URL },
+  async (t) => {
+    const { mutate, create, goal, db } = await workspace(t);
+    const { schedule } = await create("regular_action");
+    await mutate({
+      type: "rescheduleOccurrence",
+      scheduleId: schedule.id,
+      fromDate: date,
+      date: "2026-09-10",
+      startTime: "09:00",
+      durationSeconds: 900,
+    });
+    await mutate({
+      type: "setGoalStatus",
+      goalId: goal.id,
+      status: "cancelled",
+      closedOn: "2026-09-11",
+    });
+    const { workspace_id: wid } = await db
+      .prepare("SELECT workspace_id FROM goals WHERE id = ?")
+      .bind(goal.id)
+      .first();
+    await db
+      .prepare(
+        "INSERT INTO workspaces (id, seeded_for, created_at, updated_at) VALUES ('other', ?, ?, ?)",
+      )
+      .bind(date, date, date)
+      .run();
+    await db
+      .prepare(
+        "INSERT INTO goals (id, workspace_id, life_area_id, result_text, status, created_at) VALUES (?, 'other', 'body_health', 'Чужая цель с таким же ID', 'completed', ?)",
+      )
+      .bind(goal.id, date)
+      .run();
+    const otherGoalBefore = clone(
+      await db.prepare("SELECT * FROM goals WHERE workspace_id = 'other'").first(),
+    );
+    const { deleteArchivedGoalData } = load(path.join(root, "src/cloud/delete-archived-goal.ts"));
+    const before = await snapshot(db);
+    assert.equal(await deleteArchivedGoalData(db, "another-workspace", goal.id), false);
+    assert.deepEqual(await snapshot(db), before);
+    await db
+      .prepare(
+        "CREATE TRIGGER deletion_failure BEFORE DELETE ON actions BEGIN SELECT RAISE(ABORT, 'injected failure'); END",
+      )
+      .run();
+    await assert.rejects(async () => deleteArchivedGoalData(db, wid, goal.id), /injected failure/);
+    assert.deepEqual(await snapshot(db), before);
+    await db.prepare("DROP TRIGGER deletion_failure").run();
+    assert.equal(await deleteArchivedGoalData(db, wid, goal.id), true);
+    assert.deepEqual(
+      clone(await db.prepare("SELECT * FROM goals WHERE workspace_id = 'other'").first()),
+      otherGoalBefore,
+    );
+  },
+);

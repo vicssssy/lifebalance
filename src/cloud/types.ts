@@ -87,6 +87,7 @@ export type CloudWorkspaceOperation =
     }
   | { type: "updateGoal"; goalId: string; resultText: string; whyImportant: string | null }
   | { type: "setGoalStatus"; goalId: string; status: Goal["status"]; closedOn: string }
+  | { type: "deleteArchivedGoal"; goalId: string }
   | { type: "createAction"; draft: CloudActionDraft }
   | {
       type: "updateActionConfiguration";

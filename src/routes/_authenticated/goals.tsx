@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Archive,
   Check,
@@ -13,7 +13,18 @@ import {
   Xmark,
 } from "iconoir-react";
 import { toast } from "sonner";
-import { setGoalStatus } from "@/data/goals";
+import { deleteArchivedGoal, setGoalStatus } from "@/data/goals";
+import { ArchivedGoalSwipe } from "@/components/ArchivedGoalSwipe";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
 import { todayKey } from "@/domain/schedule";
 import { useGoals, useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
@@ -58,6 +69,15 @@ function GoalsScreen() {
   const { data: goals = [] } = useGoals();
   const { source } = usePlannerSource();
   const [showArchive, setShowArchive] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
+  const archiveButton = useRef<HTMLButtonElement>(null);
+  const deleteGoal = usePlannerMutation(async (goalId: string) => {
+    await deleteArchivedGoal(goalId);
+    setDeletedIds((ids) => new Set([...ids, goalId]));
+    setGoalToDelete(null);
+  });
 
   const closeGoal = usePlannerMutation(
     async ({ goalId, status }: { goalId: string; status: Exclude<GoalStatus, "active"> }) => {
@@ -66,7 +86,7 @@ function GoalsScreen() {
     },
   );
 
-  const displayGoals = goals;
+  const displayGoals = goals.filter((goal) => !deletedIds.has(goal.id));
 
   const selectedArea = areas.find((area) => area.id === search.area) ?? null;
 
@@ -92,6 +112,7 @@ function GoalsScreen() {
       right={
         selectedArea ? undefined : (
           <Button
+            ref={archiveButton}
             variant="outline"
             size="sm"
             className="mt-2 rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
@@ -118,6 +139,7 @@ function GoalsScreen() {
             size="sm"
             className="rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
             onClick={() => setShowArchive((v) => !v)}
+            ref={archiveButton}
           >
             <Archive strokeWidth={1.75} aria-hidden />
             {showArchive ? "Активные" : "Архив"}
@@ -158,7 +180,7 @@ function GoalsScreen() {
                   .filter((g) => g.life_area_id === area.id)
                   .map((goal) => {
                     const actions = source.actions.filter((a) => a.goal_id === goal.id);
-                    return (
+                    const card = (
                       <div
                         key={goal.id}
                         className="content-surface relative overflow-hidden rounded-[30px] px-3 py-4"
@@ -299,12 +321,70 @@ function GoalsScreen() {
                         ) : null}
                       </div>
                     );
+                    return showArchive ? (
+                      <ArchivedGoalSwipe
+                        key={goal.id}
+                        name={goal.result_text}
+                        onRequestDelete={() => {
+                          if (deleteGoal.isPending) return;
+                          setDeleteError(null);
+                          setGoalToDelete(goal.id);
+                        }}
+                      >
+                        {card}
+                      </ArchivedGoalSwipe>
+                    ) : (
+                      card
+                    );
                   })}
               </div>
             </section>
           ))}
         </div>
       )}
+      <AlertDialog
+        open={goalToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteGoal.isPending) setGoalToDelete(null);
+        }}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            archiveButton.current?.focus();
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>Вы точно хотите удалить эту цель?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Это действие необратимо и удалит связанную с ней статистику.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {deleteError}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteGoal.isPending}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              style={{ background: "var(--destructive)" }}
+              aria-busy={deleteGoal.isPending}
+              disabled={deleteGoal.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!goalToDelete || deleteGoal.isPending) return;
+                deleteGoal.mutate(goalToDelete, {
+                  onError: (error) => setDeleteError(error.message),
+                });
+              }}
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppScreen>
   );
 }

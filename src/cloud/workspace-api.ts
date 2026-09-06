@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { deleteArchivedGoalData } from "./delete-archived-goal";
 import type { CloudWorkspacePayload, LegacyWorkspaceSnapshot } from "./types";
 import { occurrencesForDate, type PlannerRecords } from "@/domain/occurrences";
 import type {
@@ -259,6 +260,7 @@ const operationSchema = z.discriminatedUnion("type", [
     whyImportant: nullableText(),
   }),
   z.object({ type: z.literal("setGoalStatus"), goalId: id, status: goalStatus, closedOn: dateKey }),
+  z.object({ type: z.literal("deleteArchivedGoal"), goalId: id }),
   z.object({ type: z.literal("createAction"), draft: actionDraftSchema }),
   z.object({
     type: z.literal("updateActionConfiguration"),
@@ -776,6 +778,15 @@ async function mutate(
 ): Promise<unknown> {
   const now = new Date().toISOString();
   switch (operation.type) {
+    case "deleteArchivedGoal": {
+      await assertOwned(db, "goals", "id", operation.goalId, workspaceId);
+      if (!(await deleteArchivedGoalData(db, workspaceId, operation.goalId)))
+        throw new WorkspaceRequestError(
+          "Удаление остановлено: цель активна или её история связана с другими действиями.",
+          400,
+        );
+      return null;
+    }
     case "createGoal": {
       const goal: Goal = {
         id: crypto.randomUUID(),

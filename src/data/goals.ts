@@ -34,3 +34,8 @@ export async function setGoalStatus(
 ): Promise<void> {
   await mutateCloudWorkspace({ type: "setGoalStatus", goalId, status, closedOn });
 }
+
+/** Irreversible deletion, only after the Archive confirmation dialog. */
+export async function deleteArchivedGoal(goalId: string): Promise<void> {
+  await mutateCloudWorkspace({ type: "deleteArchivedGoal", goalId });
+}
