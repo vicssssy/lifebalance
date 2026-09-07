@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { NavArrowRight } from "iconoir-react";
+import { NavArrowRight } from "@/components/ui/icons";
 import type { LifeArea } from "@/domain/types";
 import { cn } from "@/lib/utils";
 

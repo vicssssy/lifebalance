@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "iconoir-react";
+import { Plus } from "@/components/ui/icons";
 import { NAV_ALL } from "@/components/nav-items";
 import { ICON_STROKE } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";

@@ -1,5 +1,5 @@
 import { useState, type ElementType, type ReactNode } from "react";
-import { EditPencil } from "iconoir-react";
+import { EditPencil } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Textarea, Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

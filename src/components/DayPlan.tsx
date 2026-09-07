@@ -10,7 +10,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { CalendarPlus, CircleSpark, CloudSunny, HalfMoon, SunLight } from "iconoir-react";
+import { CalendarPlus, CircleSpark, CloudSunny, HalfMoon, SunLight } from "@/components/ui/icons";
 import type { AppIcon } from "@/components/ui/icon";
 import { toast } from "sonner";
 import { markActionCompleted, unmarkActionCompleted } from "@/data/completions";

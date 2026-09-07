@@ -1,4 +1,4 @@
-import { Calendar, HomeSimple, JournalPage, Trophy } from "iconoir-react";
+import { Calendar, HomeSimple, JournalPage, Trophy } from "@/components/ui/icons";
 import type { AppIcon } from "@/components/ui/icon";
 
 export type NavItem = { to: string; label: string; icon: AppIcon };

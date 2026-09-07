@@ -9,7 +9,7 @@ import {
   SkipNext,
   Sparks,
   TaskList,
-} from "iconoir-react";
+} from "@/components/ui/icons";
 import type { AppIcon } from "@/components/ui/icon";
 import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
 import { formatDuration, formatTime } from "@/domain/schedule";

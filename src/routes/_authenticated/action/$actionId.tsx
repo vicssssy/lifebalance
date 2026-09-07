@@ -10,7 +10,7 @@ import {
   OpenNewWindow as ExternalLink,
   SkipNext as SkipForward,
   Undo as Undo2,
-} from "iconoir-react";
+} from "@/components/ui/icons";
 import { toast } from "sonner";
 import { fetchAttachments, updateActionConfiguration } from "@/data/actions";
 import {

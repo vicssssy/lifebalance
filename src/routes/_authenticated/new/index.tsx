@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckSquare, Clock, NavArrowRight, Repeat, Sparks, TaskList } from "iconoir-react";
+import { CheckSquare, Clock, NavArrowRight, Repeat, Sparks, TaskList } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { ACTION_FORMATS, type ActionType } from "@/domain/constants";
 import { createGoal, updateGoal } from "@/data/goals";

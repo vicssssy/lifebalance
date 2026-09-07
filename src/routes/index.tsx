@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Sparks as Sparkles } from "iconoir-react";
+import { ArrowRight, Sparks as Sparkles } from "@/components/ui/icons";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {

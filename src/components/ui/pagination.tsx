@@ -3,7 +3,7 @@ import {
   MoreHoriz as MoreHorizontal,
   NavArrowLeft as ChevronLeft,
   NavArrowRight as ChevronRight,
-} from "iconoir-react";
+} from "@/components/ui/icons";
 
 import { cn } from "@/lib/utils";
 import { ButtonProps, buttonVariants } from "@/components/ui/button";

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { MoreHoriz as MoreHorizontal, NavArrowRight as ChevronRight } from "iconoir-react";
+import { MoreHoriz as MoreHorizontal, NavArrowRight as ChevronRight } from "@/components/ui/icons";
 
 import { cn } from "@/lib/utils";
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NavArrowLeft } from "iconoir-react";
+import { NavArrowLeft } from "@/components/ui/icons";
 import { ICON_STROKE } from "@/components/ui/icon";
 import { PageContainer, PageHeading } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";

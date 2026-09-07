@@ -5,7 +5,7 @@ import {
   NavArrowDown as ChevronDownIcon,
   NavArrowLeft as ChevronLeftIcon,
   NavArrowRight as ChevronRightIcon,
-} from "iconoir-react";
+} from "@/components/ui/icons";
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { cn } from "@/lib/utils";

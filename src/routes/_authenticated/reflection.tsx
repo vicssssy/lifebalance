@@ -11,7 +11,7 @@ import { Field, PrimaryButton, TextField } from "@/components/fields";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/surface";
-import { NavArrowLeft as ChevronLeft, NavArrowRight as ChevronRight } from "iconoir-react";
+import { NavArrowLeft as ChevronLeft, NavArrowRight as ChevronRight } from "@/components/ui/icons";
 
 export const Route = createFileRoute("/_authenticated/reflection")({
   head: () => ({

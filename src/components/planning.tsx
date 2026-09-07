@@ -6,7 +6,7 @@ import {
   NavArrowRight as ChevronRight,
   Plus,
   Xmark as X,
-} from "iconoir-react";
+} from "@/components/ui/icons";
 import { WEEKDAYS } from "@/domain/constants";
 import {
   addDays,

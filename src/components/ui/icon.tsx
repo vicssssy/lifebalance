@@ -1,5 +1,5 @@
 import type { SVGProps } from "react";
-import { Check } from "iconoir-react";
+import { Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export type AppIcon = typeof Check;

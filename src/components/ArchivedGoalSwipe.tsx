@@ -1,5 +1,5 @@
 import { useRef, useState, type PointerEvent, type ReactNode } from "react";
-import { Trash } from "iconoir-react";
+import { Trash } from "@/components/ui/icons";
 
 const REVEAL = 96;
 

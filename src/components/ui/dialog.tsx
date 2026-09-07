@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Xmark as X } from "iconoir-react";
+import { Xmark as X } from "@/components/ui/icons";
 
 import { cn } from "@/lib/utils";
 

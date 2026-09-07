@@ -1,4 +1,4 @@
-import { DotsGrid3x3 as GripVertical } from "iconoir-react";
+import { DotsGrid3x3 as GripVertical } from "@/components/ui/icons";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { cn } from "@/lib/utils";

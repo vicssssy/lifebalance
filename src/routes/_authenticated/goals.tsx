@@ -11,7 +11,7 @@ import {
   TaskList,
   Trophy,
   Xmark,
-} from "iconoir-react";
+} from "@/components/ui/icons";
 import { toast } from "sonner";
 import { deleteArchivedGoal, setGoalStatus } from "@/data/goals";
 import { ArchivedGoalSwipe } from "@/components/ArchivedGoalSwipe";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Xmark as X } from "iconoir-react";
+import { Plus, Xmark as X } from "@/components/ui/icons";
 import { RECURRING_TYPES, type ActionType } from "@/domain/constants";
 import { todayKey } from "@/domain/schedule";
 import type { Attachment, LifeArea, RitualItem, Schedule } from "@/domain/types";
