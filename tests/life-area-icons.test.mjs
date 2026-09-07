@@ -21,17 +21,20 @@ const lifeAreaIds = [
   "lifestyle",
 ];
 
-test("all twelve Life Areas own one centralized, commercially-safe icon", () => {
+test("all twelve Life Areas own one centralized, commercially-safe curated icon", () => {
   const icons = read("src/components/LifeAreaIcon.tsx");
-  const phosphorPackage = JSON.parse(read("node_modules/@phosphor-icons/react/package.json"));
+  const notices = read("THIRD_PARTY_NOTICES.md");
 
-  assert.equal(phosphorPackage.license, "MIT");
-  assert.match(icons, /Original LifeBalance life-area icon collection/);
-  assert.match(icons, /Phosphor Icons Regular.*MIT licensed/s);
+  assert.match(icons, /IconStack's public\s+\* search\/SVG API/s);
+  assert.match(icons, /Tabler Icons and Lucide both use/);
   assert.match(icons, /LIFE_AREA_ICON_CONFIG/);
   for (const id of lifeAreaIds) {
-    assert.match(icons, new RegExp(`\\b${id}: \\{ Icon:`));
+    assert.match(icons, new RegExp(`\\b${id}:\\s*\\{[\\s\\S]*?Icon:`));
   }
+  assert.match(icons, /https:\/\/iconstack\.io\/icon\/tabler\//);
+  assert.match(icons, /https:\/\/iconstack\.io\/icon\/lucide\//);
+  assert.match(notices, /Tabler Icons[\s\S]*MIT License/);
+  assert.match(notices, /Lucide Icons[\s\S]*ISC License/);
   assert.match(icons, /size-11/);
   assert.match(icons, /rounded-\[14px\]/);
   assert.match(icons, /className="size-6"/);
