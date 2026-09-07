@@ -57,6 +57,7 @@ function DraggableCard({
   return (
     <OccurrenceCard
       occurrence={occurrence}
+      ritualOpensDetails
       {...(occurrence.actionActive ? { onToggle } : {})}
       {...(maxTitleLines === 2 ? { maxTitleLines } : {})}
       {...(occurrence.actionActive
@@ -104,10 +105,14 @@ export function DayPlan({
   occurrences,
   emptyText,
   maxTitleLines,
+  allowDrag = true,
+  directRitualCompletion = false,
 }: {
   occurrences: Occurrence[];
   emptyText: string;
   maxTitleLines?: 2;
+  allowDrag?: boolean;
+  directRitualCompletion?: boolean;
 }) {
   const [dragging, setDragging] = useState(false);
   const navigate = useNavigate();
@@ -155,7 +160,7 @@ export function DayPlan({
 
   const handleToggle = (occurrence: Occurrence, next: boolean) => {
     if (!occurrence.actionActive || toggle.isPending || move.isPending) return;
-    if (occurrence.action.type === "ritual") {
+    if (!directRitualCompletion && occurrence.action.type === "ritual") {
       navigate({
         to: "/action/$actionId",
         params: { actionId: occurrence.action.id },
@@ -194,26 +199,21 @@ export function DayPlan({
     );
   };
 
-  return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={() => setDragging(true)}
-      onDragCancel={() => setDragging(false)}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="animate-rise space-y-5">
-        {sections.map((section) => {
-          const PartIcon = DAY_PART_ICON[section.key];
-          return (
-            <section key={section.key}>
-              <div className="mb-3 flex items-center gap-2.5 px-1.5 text-muted-foreground">
-                <span className="flex size-7 items-center justify-center rounded-full bg-secondary/75 text-primary">
-                  <PartIcon className="size-4" strokeWidth={1.75} aria-hidden />
-                </span>
-                <SectionTitle className="block uppercase tracking-[0.09em]">
-                  {section.title}
-                </SectionTitle>
-              </div>
+  const plan = (
+    <div className="animate-rise space-y-5">
+      {sections.map((section) => {
+        const PartIcon = DAY_PART_ICON[section.key];
+        return (
+          <section key={section.key}>
+            <div className="mb-3 flex items-center gap-2.5 px-1.5 text-muted-foreground">
+              <span className="flex size-7 items-center justify-center rounded-full bg-secondary/75 text-primary">
+                <PartIcon className="size-4" strokeWidth={1.75} aria-hidden />
+              </span>
+              <SectionTitle className="block uppercase tracking-[0.09em]">
+                {section.title}
+              </SectionTitle>
+            </div>
+            {allowDrag ? (
               <DropSection part={section.key} active={dragging}>
                 <div className="space-y-3">
                   {section.items.map((occ) => (
@@ -229,11 +229,34 @@ export function DayPlan({
                   <p className="py-3 text-center text-xs text-muted-foreground">Перенести сюда</p>
                 ) : null}
               </DropSection>
-            </section>
-          );
-        })}
-      </div>
+            ) : (
+              <div className="space-y-3">
+                {section.items.map((occ) => (
+                  <OccurrenceCard
+                    key={occ.key}
+                    occurrence={occ}
+                    {...(occ.actionActive && !toggle.isPending ? { onToggle: handleToggle } : {})}
+                    {...(maxTitleLines === 2 ? { maxTitleLines } : {})}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+  return allowDrag ? (
+    <DndContext
+      sensors={sensors}
+      onDragStart={() => setDragging(true)}
+      onDragCancel={() => setDragging(false)}
+      onDragEnd={handleDragEnd}
+    >
+      {plan}
     </DndContext>
+  ) : (
+    plan
   );
 }
 

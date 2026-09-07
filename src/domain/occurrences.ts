@@ -99,7 +99,7 @@ export function occurrencesForDate(
       }
     }
 
-    let completed = completion?.status === "completed";
+    const completed = completion?.status === "completed";
     const skipped = completion?.status === "skipped";
 
     let ritualProgress: Occurrence["ritualProgress"] = null;
@@ -114,7 +114,6 @@ export function occurrencesForDate(
         ),
       ).length;
       ritualProgress = { done, total: items.length };
-      completed = completed && items.length > 0 && done === items.length;
     }
 
     result.push({
@@ -142,6 +141,16 @@ export interface DaySection {
   key: DayPart;
   title: string;
   items: Occurrence[];
+}
+
+/** Read-only calendar progress: a ritual is one occurrence, never a count of items. */
+export function completionProgressForDate(source: OccurrenceSource, date: string) {
+  const occurrences = occurrencesForDate(source, date, "history");
+  return {
+    planned: occurrences.length,
+    completed: occurrences.filter((occurrence) => occurrence.completed && !occurrence.skipped)
+      .length,
+  };
 }
 
 /** Группировка строго: Утро → День → Вечер → Дополнительно. Пустые категории не возвращаются. */

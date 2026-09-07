@@ -178,12 +178,10 @@ for (const type of types) {
     }
     assert.equal(completeButton(tree).props.variant, "primary");
     if (type === "ritual") {
-      assert.equal(completeButton(tree).props.disabled, true);
-      source.ritualItemCompletions = [
-        { ritual_item_id: "i", schedule_id: "s", occurrence_date: "2026-09-06" },
-      ];
+      assert.equal(completeButton(tree).props.disabled, false);
     }
     await completeButton(tree).props.onClick();
+    if (type === "ritual") assert.deepEqual(source.ritualItemCompletions, []);
     // Remount with a reloaded stored snapshot; no component-local completion flag.
     const reopened = harness(JSON.parse(JSON.stringify(source)))();
     assert.equal(completeButton(reopened).props.variant, "occurrenceCompleted");

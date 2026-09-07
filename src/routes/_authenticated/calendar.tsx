@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { occurrencesForDate } from "@/domain/occurrences";
+import { completionProgressForDate, occurrencesForDate } from "@/domain/occurrences";
 import { formatDayLong, fromDateKey, todayKey } from "@/domain/schedule";
 import { usePlannerSource } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
@@ -28,7 +28,12 @@ function CalendarScreen() {
   return (
     <AppScreen title="Календарь" subtitle={formatDayLong(fromDateKey(date))}>
       <div className="space-y-6">
-        <DayPicker value={selected} onChange={setSelected} multiple={false} />
+        <DayPicker
+          value={selected}
+          onChange={setSelected}
+          multiple={false}
+          getProgress={(day) => completionProgressForDate(source, day)}
+        />
         {isLoading ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Загружаем план…</p>
         ) : (

@@ -319,8 +319,17 @@ test("ritual: partial progress, automatic completion, unchecking, pause and fore
   const setItem = (item, done) =>
     mutate({ type: "setRitualItemCompletion", ritualItemId: item.id, ...context, done });
   await mutate({ type: "setCompletion", actionId: action.id, ...context, status: "completed" });
-  assert.equal(at(await read(), date, action.id)[0].completed, false);
+  assert.equal(at(await read(), date, action.id)[0].completed, true);
+  assert.equal(at(await read(), date, action.id)[0].ritualProgress.done, 0);
   await setItem(items[0], true);
+  const partialItems = clone((await read()).source.ritualItemCompletions);
+  await mutate({ type: "setCompletion", actionId: action.id, ...context, status: "completed" });
+  assert.equal(at(await read(), date, action.id)[0].completed, true);
+  assert.deepEqual(clone((await read()).source.ritualItemCompletions), partialItems);
+  assert.equal(at(await read(), "2026-09-11", action.id)[0].completed, false);
+  await mutate({ type: "removeCompletion", ...context });
+  assert.equal(at(await read(), date, action.id)[0].completed, false);
+  assert.deepEqual(clone((await read()).source.ritualItemCompletions), partialItems);
   await mutate({ type: "setCompletion", actionId: action.id, ...context, status: "skipped" });
   await mutate({ type: "removeCompletion", ...context }); // Вернусь позже
   let occurrence = at(await read(), date, action.id)[0];
@@ -328,6 +337,9 @@ test("ritual: partial progress, automatic completion, unchecking, pause and fore
   assert.equal(occurrence.completed || occurrence.skipped, false);
   await setItem(items[1], true);
   assert.equal(at(await read(), date, action.id)[0].completed, true);
+  await mutate({ type: "removeCompletion", ...context });
+  assert.equal(at(await read(), date, action.id)[0].completed, false);
+  assert.equal(at(await read(), date, action.id)[0].ritualProgress.done, 2);
   await setItem(items[0], false);
   occurrence = at(await read(), date, action.id)[0];
   assert.equal(occurrence.completed || occurrence.skipped, false);

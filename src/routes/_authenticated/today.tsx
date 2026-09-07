@@ -132,6 +132,8 @@ function TodayScreen() {
               : "На этот день ничего не запланировано."
           }
           maxTitleLines={2}
+          allowDrag={false}
+          directRitualCompletion
         />
       )}
     </AppScreen>

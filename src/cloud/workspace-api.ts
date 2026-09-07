@@ -1337,10 +1337,6 @@ async function mutate(
       );
       if (occurrence.action.id !== operation.actionId)
         throw new WorkspaceRequestError("Расписание не принадлежит выбранному действию.", 400);
-      if (occurrence.action.type === "ritual" && operation.status === "completed") {
-        await ritualCompletionStatement(db, workspaceId, occurrence, now).run();
-        return null;
-      }
       await db
         .prepare(
           "INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (workspace_id, schedule_id, occurrence_date) DO UPDATE SET action_id = excluded.action_id, completed_at = excluded.completed_at, status = excluded.status",
@@ -1364,10 +1360,6 @@ async function mutate(
         operation.scheduleId,
         operation.date,
       );
-      if (occurrence.action.type === "ritual") {
-        await ritualCompletionStatement(db, workspaceId, occurrence, now).run();
-        return null;
-      }
       await db
         .prepare(
           "UPDATE completions SET status = 'in_progress', completed_at = NULL WHERE workspace_id = ? AND schedule_id = ? AND occurrence_date = ?",

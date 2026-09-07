@@ -37,11 +37,13 @@ export function OccurrenceCard({
   onToggle,
   drag,
   maxTitleLines,
+  ritualOpensDetails = false,
 }: {
   occurrence: Occurrence;
   onToggle?: (occurrence: Occurrence, next: boolean) => void;
   drag?: DragHandleProps;
   maxTitleLines?: 2;
+  ritualOpensDetails?: boolean;
 }) {
   const { action, ritualProgress, completed, skipped, startTime, date } = occurrence;
   const time = formatTime(startTime);
@@ -118,14 +120,18 @@ export function OccurrenceCard({
         <button
           type="button"
           aria-label={
-            action.type === "ritual"
+            action.type === "ritual" && ritualOpensDetails
               ? "Открыть пункты ритуала"
               : completed
                 ? "Снять отметку выполнения"
                 : "Отметить выполненным"
           }
-          aria-pressed={action.type === "ritual" ? undefined : completed}
-          onClick={() => onToggle?.(occurrence, !completed)}
+          aria-pressed={ritualOpensDetails && action.type === "ritual" ? undefined : completed}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggle?.(occurrence, !completed);
+          }}
           disabled={!onToggle}
           className="focus-ring touch-target mr-0.5 flex shrink-0 items-center justify-center rounded-full"
         >

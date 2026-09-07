@@ -59,10 +59,12 @@ export function DayPicker({
   value,
   onChange,
   multiple = true,
+  getProgress,
 }: {
   value: string[];
   onChange: (value: string[]) => void;
   multiple?: boolean;
+  getProgress?: (date: string) => { planned: number; completed: number };
 }) {
   const [month, setMonth] = useState(() => {
     const first = value[0] ? fromDateKey(value[0]) : new Date();
@@ -106,6 +108,12 @@ export function DayPicker({
           const key = toDateKey(date);
           const selected = value.includes(key);
           const otherMonth = date.getMonth() !== month.getMonth();
+          const progress = getProgress?.(key);
+          const hasProgress = Boolean(progress && progress.planned > 0);
+          const ratio =
+            progress && progress.planned > 0
+              ? Math.max(0, Math.min(1, progress.completed / progress.planned))
+              : 0;
           return (
             <button
               key={key}
@@ -120,18 +128,55 @@ export function DayPicker({
                 )
               }
               aria-pressed={selected}
-              aria-label={formatDayShort(date)}
+              aria-label={
+                hasProgress
+                  ? `${formatDayShort(date)} — выполнено ${progress!.completed} из ${progress!.planned}`
+                  : formatDayShort(date)
+              }
               className={`focus-ring flex h-11 items-center justify-center rounded-full text-base tabular-nums transition-[background-color,color,transform,box-shadow] duration-200 active:scale-95 ${
-                selected
-                  ? "accent-control font-semibold"
-                  : otherMonth
-                    ? "text-hint"
-                    : key === today
-                      ? "bg-muted font-semibold text-foreground"
-                      : "text-foreground"
+                hasProgress
+                  ? "text-foreground"
+                  : selected
+                    ? "accent-control font-semibold"
+                    : otherMonth
+                      ? "text-hint"
+                      : key === today
+                        ? "bg-muted font-semibold text-foreground"
+                        : "text-foreground"
               }`}
             >
-              {date.getDate()}
+              {hasProgress ? (
+                <span className="relative flex aspect-square w-full max-w-10 items-center justify-center">
+                  <span
+                    className={`absolute inset-[5px] flex items-center justify-center rounded-full text-[14px] ${selected ? "accent-control font-semibold" : key === today ? "bg-muted font-semibold" : "bg-secondary/45"}`}
+                  >
+                    {date.getDate()}
+                  </span>
+                  <svg
+                    viewBox="0 0 40 40"
+                    className="pointer-events-none absolute inset-0 size-full"
+                    aria-hidden="true"
+                    data-day-progress={key}
+                  >
+                    <circle cx="20" cy="20" r="18" fill="none" stroke="#e1e4e8" strokeWidth="2.5" />
+                    {ratio > 0 ? (
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r="18"
+                        fill="none"
+                        stroke="#6b8514"
+                        strokeWidth="2.5"
+                        pathLength="100"
+                        strokeDasharray={`${ratio * 100} 100`}
+                        transform="rotate(-90 20 20)"
+                      />
+                    ) : null}
+                  </svg>
+                </span>
+              ) : (
+                date.getDate()
+              )}
             </button>
           );
         })}

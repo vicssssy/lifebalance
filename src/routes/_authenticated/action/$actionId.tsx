@@ -482,10 +482,7 @@ function ActionDetail() {
                 variant={completed ? "occurrenceCompleted" : "primary"}
                 aria-label={completed ? "✓ Выполнено" : "Выполнено"}
                 loading={complete.isPending}
-                disabled={
-                  occurrencePending ||
-                  (action.type === "ritual" && (!items.length || doneCount < items.length))
-                }
+                disabled={occurrencePending}
                 onClick={() =>
                   complete.mutate(undefined as never, {
                     onSuccess: () => toast.success("Выполнено"),
