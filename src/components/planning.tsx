@@ -20,6 +20,7 @@ import {
 } from "@/domain/schedule";
 import type { LifeArea } from "@/domain/types";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
+import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 import { cn } from "@/lib/utils";
 
 /** Дни недели для повторяющихся форматов. */
@@ -297,10 +298,15 @@ export function LifeAreaPicker({
                           else if (value.length < 3) onChange([...value, area.id]);
                           setOpen(false);
                         }}
-                        className="focus-ring flex w-full items-center justify-between gap-3 rounded-[20px] px-3 py-3 text-left transition-colors duration-200 hover:bg-white/55"
+                        className="focus-ring flex w-full items-start justify-between gap-3 rounded-[20px] px-3 py-3 text-left transition-colors duration-200 hover:bg-white/55"
                       >
-                        <span className="text-base">{area.name}</span>
-                        {selected ? <Check className="size-4 text-primary" /> : null}
+                        <span className="flex min-w-0 items-start gap-3">
+                          <LifeAreaIconFrame area={area} className="mt-0.5" />
+                          <span className="min-w-0 pt-2 text-base">{area.name}</span>
+                        </span>
+                        {selected ? (
+                          <Check className="mt-3.5 size-4 shrink-0 text-primary" />
+                        ) : null}
                       </button>
                     );
                   })}

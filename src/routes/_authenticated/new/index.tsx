@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/ui/layout";
 import { StickyActions } from "@/components/StickyActions";
 import type { AppIcon } from "@/components/ui/icon";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
+import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 
 export const Route = createFileRoute("/_authenticated/new/")({
   head: () => ({
@@ -104,10 +105,15 @@ function NewFlow() {
                     setGoalWhyImportant("");
                     setStep("goal");
                   }}
-                  className="row-card row-card-press w-full px-4 py-4 text-left"
+                  className="row-card row-card-press flex w-full items-start gap-3 px-4 py-4 text-left"
                 >
-                  <p className="text-lg font-semibold">{a.name}</p>
-                  <p className="mt-1 text-sm leading-snug text-muted-foreground">{a.question}</p>
+                  <LifeAreaIconFrame area={a} className="mt-0.5" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-lg font-semibold">{a.name}</span>
+                    <span className="mt-1 block text-sm leading-snug text-muted-foreground">
+                      {a.question}
+                    </span>
+                  </span>
                 </button>
               ))}
             </div>
