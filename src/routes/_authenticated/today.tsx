@@ -134,6 +134,7 @@ function TodayScreen() {
           maxTitleLines={2}
           allowDrag={false}
           directRitualCompletion
+          completionControlClassName="mr-3 min-[390px]:mr-4"
         />
       )}
     </AppScreen>

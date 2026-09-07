@@ -218,6 +218,7 @@ for (const type of types)
         emptyText: "",
         allowDrag: false,
         directRitualCompletion: true,
+        completionControlClassName: "mr-3 min-[390px]:mr-4",
         maxTitleLines: 2,
       });
       assert.ok(!nodes(plan).some((n) => n.type === "DndContext"));
@@ -228,8 +229,8 @@ for (const type of types)
       assert.equal(buttons.length, 1, "no drag handle");
       assert.equal(buttons[0].props["aria-pressed"], completed);
       assert.ok(
-        buttons[0].props.className.includes("mr-2"),
-        "completion control has right breathing room",
+        buttons[0].props.className.includes("mr-3 min-[390px]:mr-4"),
+        "Today control follows the header's right grid line",
       );
       const completionCircle = nodes(card).find(
         (n) => n.type === "span" && n.props?.className?.includes("size-7"),
@@ -267,6 +268,7 @@ test("Today and Calendar disable card dragging while Calendar keeps progress", (
   const plan = nodes(today).find((n) => n.type === "DayPlan");
   assert.equal(plan.props.allowDrag, false);
   assert.equal(plan.props.directRitualCompletion, true);
+  assert.equal(plan.props.completionControlClassName, "mr-3 min-[390px]:mr-4");
   const calendar = localLoad("src/routes/_authenticated/calendar.tsx").Route.component();
   const calendarPlan = nodes(calendar).find((n) => n.type === "DayPlan");
   assert.equal(calendarPlan.props.allowDrag, false);

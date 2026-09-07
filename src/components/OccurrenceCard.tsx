@@ -38,12 +38,15 @@ export function OccurrenceCard({
   drag,
   maxTitleLines,
   ritualOpensDetails = false,
+  completionControlClassName,
 }: {
   occurrence: Occurrence;
   onToggle?: (occurrence: Occurrence, next: boolean) => void;
   drag?: DragHandleProps;
   maxTitleLines?: 2;
   ritualOpensDetails?: boolean;
+  /** Выравнивание контроля выполнения в контексте конкретного экрана. */
+  completionControlClassName?: string;
 }) {
   const { action, ritualProgress, completed, skipped, startTime, date } = occurrence;
   const time = formatTime(startTime);
@@ -133,7 +136,10 @@ export function OccurrenceCard({
             onToggle?.(occurrence, !completed);
           }}
           disabled={!onToggle}
-          className="focus-ring touch-target mr-2 flex shrink-0 items-center justify-center rounded-full"
+          className={cn(
+            "focus-ring touch-target mr-2 flex shrink-0 items-center justify-center rounded-full",
+            completionControlClassName,
+          )}
         >
           <span
             className={cn(

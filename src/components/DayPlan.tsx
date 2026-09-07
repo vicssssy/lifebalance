@@ -107,12 +107,14 @@ export function DayPlan({
   maxTitleLines,
   allowDrag = true,
   directRitualCompletion = false,
+  completionControlClassName,
 }: {
   occurrences: Occurrence[];
   emptyText: string;
   maxTitleLines?: 2;
   allowDrag?: boolean;
   directRitualCompletion?: boolean;
+  completionControlClassName?: string;
 }) {
   const [dragging, setDragging] = useState(false);
   const navigate = useNavigate();
@@ -236,6 +238,7 @@ export function DayPlan({
                     key={occ.key}
                     occurrence={occ}
                     {...(occ.actionActive && !toggle.isPending ? { onToggle: handleToggle } : {})}
+                    {...(completionControlClassName ? { completionControlClassName } : {})}
                     {...(maxTitleLines === 2 ? { maxTitleLines } : {})}
                   />
                 ))}
