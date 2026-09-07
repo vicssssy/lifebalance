@@ -243,11 +243,11 @@ for (const type of types)
       assert.equal(writes.at(-1).date, date);
       assert.equal(writes.at(-1).scheduleId, occurrence.schedule.id);
     }
-    const calendarPlan = DayPlan({ occurrences: [occurrence], emptyText: "" });
-    assert.equal(calendarPlan.type, "DndContext", "Calendar cards retain existing behavior");
+    const calendarPlan = DayPlan({ occurrences: [occurrence], emptyText: "", allowDrag: false });
+    assert.notEqual(calendarPlan.type, "DndContext", "Calendar cards do not support dragging");
   });
 
-test("Today enables direct completion/no drag while Calendar alone enables progress", () => {
+test("Today and Calendar disable card dragging while Calendar keeps progress", () => {
   const source = fixture();
   const localLoad = loader({
     "@/hooks/useAppData": { usePlannerSource: () => ({ source, isLoading: false }) },
@@ -257,6 +257,8 @@ test("Today enables direct completion/no drag while Calendar alone enables progr
   assert.equal(plan.props.allowDrag, false);
   assert.equal(plan.props.directRitualCompletion, true);
   const calendar = localLoad("src/routes/_authenticated/calendar.tsx").Route.component();
+  const calendarPlan = nodes(calendar).find((n) => n.type === "DayPlan");
+  assert.equal(calendarPlan.props.allowDrag, false);
   const picker = nodes(calendar).find((n) => n.type === "DayPicker");
   assert.deepEqual(plain(picker.props.getProgress(date)), { planned: 5, completed: 0 });
 });

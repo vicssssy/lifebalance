@@ -41,6 +41,7 @@ function CalendarScreen() {
             key={date}
             occurrences={occurrences}
             emptyText="На этот день ничего не запланировано."
+            allowDrag={false}
           />
         )}
       </div>
