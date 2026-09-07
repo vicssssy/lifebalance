@@ -7,6 +7,7 @@ import {
   Clock,
   MoreHoriz,
   NavArrowRight,
+  Plus,
   Repeat,
   Sparks,
   TaskList,
@@ -49,6 +50,8 @@ const ACTION_ICON: Record<ActionType, AppIcon> = {
   time_slot: Clock,
   preparation: TaskList,
 };
+
+const ACTION_TYPES: ActionType[] = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 
 export const Route = createFileRoute("/_authenticated/goals")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -299,6 +302,48 @@ function GoalsScreen() {
                             </p>
                           </div>
                         )}
+
+                        {goal.status === "active" ? (
+                          <div className="ml-[52px] mt-2">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="min-h-11 rounded-2xl border-white/85 bg-white/72 px-3 text-primary shadow-low hover:bg-secondary/75"
+                                >
+                                  <Plus className="size-4" strokeWidth={2} aria-hidden />
+                                  Добавить действие
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="start"
+                                sideOffset={8}
+                                className="content-surface min-w-56 rounded-[20px] border-white/85 p-1.5 shadow-high"
+                              >
+                                {ACTION_TYPES.map((type) => (
+                                  <DropdownMenuItem
+                                    key={type}
+                                    className="min-h-11 rounded-[14px] px-3 text-[15px] font-medium text-foreground focus:bg-secondary/85"
+                                    onSelect={() =>
+                                      navigate({
+                                        to: "/new/$type",
+                                        params: { type },
+                                        search: {
+                                          lifeAreaId: goal.life_area_id,
+                                          goalId: goal.id,
+                                          resultText: goal.result_text,
+                                        },
+                                      })
+                                    }
+                                  >
+                                    {ACTION_FORMAT_NAME[type]}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ) : null}
                       </div>
                     );
                     return showArchive ? (

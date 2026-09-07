@@ -224,6 +224,14 @@ test("active Goal uses the menu and confirmation before the existing archive lif
   assert.equal(h.render().props.title, "Мои цели");
   assert.equal(h.render().props.subtitle, "То, к чему ты сейчас идёшь");
   assert.equal(findByText(h.render(), "p", "Цель").props.children, "Цель");
+  assert.ok(
+    nodes(h.render()).some(
+      (node) =>
+        node.type === "Button" &&
+        Array.isArray(node.props?.children) &&
+        node.props.children.includes("Добавить действие"),
+    ),
+  );
   assert.equal(
     findByText(h.render(), "DropdownMenuItem", "Цель достигнута").props.children,
     "Цель достигнута",
