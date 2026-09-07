@@ -259,14 +259,14 @@ for (const type of types)
       occurrences: [occurrence],
       emptyText: "",
       allowDrag: false,
-      completionControlClassName: "mr-2.5",
+      completionControlClassName: "mr-[7px] min-[430px]:mr-2.5",
     });
     assert.notEqual(calendarPlan.type, "DndContext", "Calendar cards do not support dragging");
     const calendarCardProps = nodes(calendarPlan).find((n) => n.type === "OccurrenceCard").props;
     const calendarCard = OccurrenceCard(calendarCardProps);
     const calendarControl = nodes(calendarCard).find((n) => n.type === "button");
     assert.ok(
-      calendarControl.props.className.includes("mr-2.5"),
+      calendarControl.props.className.includes("mr-[7px]"),
       "Calendar selector follows the date grid's right edge",
     );
   });
@@ -284,7 +284,7 @@ test("Today and Calendar disable card dragging while Calendar keeps progress", (
   const calendar = localLoad("src/routes/_authenticated/calendar.tsx").Route.component();
   const calendarPlan = nodes(calendar).find((n) => n.type === "DayPlan");
   assert.equal(calendarPlan.props.allowDrag, false);
-  assert.equal(calendarPlan.props.completionControlClassName, "mr-2.5");
+  assert.equal(calendarPlan.props.completionControlClassName, "mr-[7px] min-[430px]:mr-2.5");
   const picker = nodes(calendar).find((n) => n.type === "DayPicker");
   assert.equal(picker.props.alignCalendarRightEdge, true);
   assert.deepEqual(plain(picker.props.getProgress(date)), { planned: 5, completed: 0 });

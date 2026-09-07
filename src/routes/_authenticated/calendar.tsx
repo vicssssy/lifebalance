@@ -43,7 +43,7 @@ function CalendarScreen() {
             occurrences={occurrences}
             emptyText="На этот день ничего не запланировано."
             allowDrag={false}
-            completionControlClassName="mr-2.5"
+            completionControlClassName="mr-[7px] min-[430px]:mr-2.5"
           />
         )}
       </div>

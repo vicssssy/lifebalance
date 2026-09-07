@@ -82,7 +82,7 @@ export function DayPicker({
       <div
         className={cn(
           "flex items-center justify-between pb-3",
-          alignCalendarRightEdge ? "px-1" : "px-0.5",
+          alignCalendarRightEdge ? "pl-1 pr-px min-[430px]:px-1" : "px-0.5",
         )}
       >
         <button
