@@ -227,6 +227,13 @@ for (const type of types)
       const buttons = nodes(card).filter((n) => n.type === "button");
       assert.equal(buttons.length, 1, "no drag handle");
       assert.equal(buttons[0].props["aria-pressed"], completed);
+      const completionCircle = nodes(card).find(
+        (n) => n.type === "span" && n.props?.className?.includes("size-7"),
+      );
+      assert.ok(
+        completionCircle,
+        "completion indicator is visually compact while the tap target stays large",
+      );
       const link = nodes(card).find((n) => n.type === "Link");
       assert.ok(!nodes(link).includes(buttons[0]), "button is not nested in navigation link");
       assert.equal(link.props.to, "/action/$actionId");

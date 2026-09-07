@@ -137,7 +137,7 @@ export function OccurrenceCard({
         >
           <span
             className={cn(
-              "flex size-8 items-center justify-center rounded-full border-2 transition-[background-color,border-color,transform] duration-200",
+              "flex size-7 items-center justify-center rounded-full border-[1.5px] transition-[background-color,border-color,transform] duration-200",
               completed
                 ? "border-occurrence-completed bg-occurrence-completed text-foreground"
                 : skipped
@@ -146,7 +146,7 @@ export function OccurrenceCard({
             )}
           >
             {completed ? (
-              <Check className="size-4" strokeWidth={2.5} aria-hidden />
+              <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
             ) : skipped ? (
               <SkipNext className="size-3.5" strokeWidth={2} aria-hidden />
             ) : null}
