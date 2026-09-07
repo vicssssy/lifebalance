@@ -90,6 +90,9 @@
 }
 
 :root {
+  /* Единственная адаптивная сетка контента для всех экранов приложения. */
+  --app-content-max-width: 26.875rem;
+  --app-content-gutter: clamp(1rem, 4vw, 1.25rem);
   --radius: 28px;
 
   /* Neutral scale with a restrained cool cast. */
@@ -303,17 +306,13 @@
   padding-right: max(env(safe-area-inset-right), 1.25rem);
 }
 
-/* Единые боковые отступы страницы с учётом safe-area. */
-@utility page-gutter {
-  padding-left: max(env(safe-area-inset-left), clamp(1rem, 4vw, 1.25rem));
-  padding-right: max(env(safe-area-inset-right), clamp(1rem, 4vw, 1.25rem));
-}
-
-@media (min-width: 640px) {
-  .page-gutter {
-    padding-left: max(env(safe-area-inset-left), 1.5rem);
-    padding-right: max(env(safe-area-inset-right), 1.5rem);
-  }
+/* Единая iOS-сетка: safe area + одинаковые границы заголовков и основного контента. */
+@utility app-content-grid {
+  width: 100%;
+  max-width: var(--app-content-max-width);
+  margin-inline: auto;
+  padding-left: max(env(safe-area-inset-left), var(--app-content-gutter));
+  padding-right: max(env(safe-area-inset-right), var(--app-content-gutter));
 }
 
 /* Минимальный тач-таргет 44×44 */
@@ -471,7 +470,7 @@
 
 @media (max-width: 359px) {
   .safe-x,
-  .page-gutter {
+  .app-content-grid {
     padding-left: max(env(safe-area-inset-left), 1rem);
     padding-right: max(env(safe-area-inset-right), 1rem);
   }

@@ -163,17 +163,17 @@ function ActionDetail() {
 
   if (isLoading) {
     return (
-      <div className="safe-top px-5 py-16">
+      <PageContainer as="div" className="safe-top py-16">
         <p className="content-surface rounded-[30px] px-5 py-10 text-center text-sm text-muted-foreground">
           Загружаем…
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
   if (!action) {
     return (
-      <div className="safe-top px-5 py-16 text-center">
+      <PageContainer as="div" className="safe-top py-16 text-center">
         <div className="content-surface rounded-[30px] px-5 py-10">
           <p className="text-lg font-semibold">Действие не найдено</p>
           <button
@@ -184,7 +184,7 @@ function ActionDetail() {
             Вернуться к плану
           </button>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -203,7 +203,7 @@ function ActionDetail() {
           title={ACTION_FORMAT_NAME[action.type]}
           subtitle={goal?.result_text ? `Моя цель: ${goal.result_text}` : undefined}
         />
-        <main className="animate-rise page-gutter mx-auto w-full max-w-md pt-6">
+        <PageContainer as="main" className="animate-rise pt-6">
           <ActionForm
             type={action.type}
             areas={areas}
@@ -236,7 +236,7 @@ function ActionDetail() {
               })
             }
           />
-        </main>
+        </PageContainer>
       </div>
     );
   }

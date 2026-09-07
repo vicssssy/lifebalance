@@ -7,6 +7,7 @@ import { createGoal, updateGoal } from "@/data/goals";
 import { useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { PageContainer } from "@/components/ui/layout";
 import { StickyActions } from "@/components/StickyActions";
 import type { AppIcon } from "@/components/ui/icon";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
@@ -88,7 +89,7 @@ function NewFlow() {
         subtitle={step === "goal" ? area?.description : undefined}
       />
 
-      <main key={step} className="animate-rise page-gutter mx-auto w-full max-w-md space-y-6 pt-6">
+      <PageContainer as="main" key={step} className="animate-rise space-y-6 pt-6">
         {step === "area" ? (
           <>
             <div className="flex flex-col gap-3">
@@ -210,7 +211,7 @@ function NewFlow() {
             </div>
           </>
         ) : null}
-      </main>
+      </PageContainer>
     </div>
   );
 }

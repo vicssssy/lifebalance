@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ElementType, type ReactNode } from "react";
 import { EditPencil } from "iconoir-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, Input } from "@/components/ui/input";
@@ -7,16 +7,18 @@ import { cn } from "@/lib/utils";
 /**
  * Единый контейнер контента страницы: комфортные боковые отступы,
  * safe-area и предсказуемая максимальная ширина. Все экраны используют
- * только его — отдельные padding'и по экранам не добавляем.
+ * только эту адаптивную iOS-сетку — отдельные padding'и по экранам не добавляем.
  */
 export function PageContainer({
   children,
   className,
+  as: Tag = "div",
 }: {
   children: ReactNode;
   className?: string;
+  as?: ElementType;
 }) {
-  return <div className={cn("page-gutter mx-auto w-full max-w-md", className)}>{children}</div>;
+  return <Tag className={cn("app-content-grid", className)}>{children}</Tag>;
 }
 
 /** Крупный заголовок страницы: надзаголовок, заголовок, подпись, действие справа. */

@@ -5,6 +5,7 @@ import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
 import { useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
 import { ActionForm, type ActionFormValues } from "@/components/ActionForm";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { PageContainer } from "@/components/ui/layout";
 
 const TYPES: ActionType[] = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 
@@ -69,7 +70,7 @@ function CreateAction() {
         subtitle={search.resultText ? `Моя цель: ${search.resultText}` : undefined}
       />
 
-      <main className="animate-rise page-gutter mx-auto w-full max-w-md pt-6">
+      <PageContainer as="main" className="animate-rise pt-6">
         <ActionForm
           type={type}
           areas={areas}
@@ -90,7 +91,7 @@ function CreateAction() {
             })
           }
         />
-      </main>
+      </PageContainer>
     </div>
   );
 }
