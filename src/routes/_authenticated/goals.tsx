@@ -5,12 +5,12 @@ import {
   Check,
   CheckSquare,
   Clock,
+  MoreHoriz,
   NavArrowRight,
   Repeat,
   Sparks,
   TaskList,
   Trophy,
-  Xmark,
 } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { deleteArchivedGoal, setGoalStatus } from "@/data/goals";
@@ -33,6 +33,12 @@ import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { AppIcon } from "@/components/ui/icon";
 import type { GoalStatus } from "@/domain/types";
 
@@ -69,6 +75,10 @@ function GoalsScreen() {
   const { data: goals = [] } = useGoals();
   const { source } = usePlannerSource();
   const [showArchive, setShowArchive] = useState(false);
+  const [goalLifecycleDialog, setGoalLifecycleDialog] = useState<{
+    goalId: string;
+    status: Exclude<GoalStatus, "active">;
+  } | null>(null);
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
@@ -87,6 +97,9 @@ function GoalsScreen() {
   );
 
   const displayGoals = goals.filter((goal) => !deletedIds.has(goal.id));
+  const lifecycleGoal = goalLifecycleDialog
+    ? (displayGoals.find((goal) => goal.id === goalLifecycleDialog.goalId) ?? null)
+    : null;
 
   const selectedArea = areas.find((area) => area.id === search.area) ?? null;
 
@@ -99,33 +112,23 @@ function GoalsScreen() {
 
   return (
     <AppScreen
-      title={selectedArea?.name ?? "Мои цели"}
-      subtitle={
-        selectedArea
-          ? showArchive
-            ? "Архив результатов"
-            : "Активные результаты"
-          : showArchive
-            ? "Архив результатов"
-            : "Активные результаты по сферам жизни"
-      }
+      title="Мои цели"
+      subtitle="То, к чему ты сейчас идёшь"
       right={
-        selectedArea ? undefined : (
-          <Button
-            ref={archiveButton}
-            variant="outline"
-            size="sm"
-            className="mt-2 rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
-            onClick={() => setShowArchive((v) => !v)}
-          >
-            <Archive strokeWidth={1.75} aria-hidden />
-            {showArchive ? "Активные" : "Архив"}
-          </Button>
-        )
+        <Button
+          ref={archiveButton}
+          variant="outline"
+          size="sm"
+          className="mt-2 rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
+          onClick={() => setShowArchive((v) => !v)}
+        >
+          <Archive strokeWidth={1.75} aria-hidden />
+          {showArchive ? "Активные" : "Архив"}
+        </Button>
       }
     >
       {selectedArea ? (
-        <div className="mb-5 flex items-center gap-2">
+        <div className="mb-5 flex items-center">
           <Button
             variant="outline"
             size="sm"
@@ -133,16 +136,6 @@ function GoalsScreen() {
             onClick={() => navigate({ to: "/goals", search: { area: undefined } })}
           >
             Все сферы
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full border-white/85 bg-white/72 shadow-mid backdrop-blur-2xl"
-            onClick={() => setShowArchive((v) => !v)}
-            ref={archiveButton}
-          >
-            <Archive strokeWidth={1.75} aria-hidden />
-            {showArchive ? "Активные" : "Архив"}
           </Button>
         </div>
       ) : null}
@@ -185,12 +178,7 @@ function GoalsScreen() {
                         key={goal.id}
                         className="content-surface relative overflow-hidden rounded-[30px] px-3 py-4"
                       >
-                        <span
-                          className="absolute bottom-12 left-8 top-12 w-px bg-primary/16"
-                          aria-hidden
-                        />
-
-                        <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
+                        <div className="relative grid grid-cols-[40px_minmax(0,1fr)_44px] gap-x-3">
                           <span
                             className="z-10 flex size-10 items-center justify-center rounded-[16px] border border-white/85 bg-secondary text-primary shadow-low"
                             aria-hidden
@@ -203,12 +191,50 @@ function GoalsScreen() {
                                 ? "✓ Результат достигнут"
                                 : goal.status === "cancelled"
                                   ? "× Отменено"
-                                  : "Результат"}
+                                  : "Цель"}
                             </p>
                             <h3 className="mt-2 text-[18px] font-semibold leading-[1.34] tracking-[-0.02em] text-foreground">
                               {goal.result_text}
                             </h3>
                           </div>
+                          {goal.status === "active" ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="focus-ring mt-0.5 size-11 rounded-2xl text-muted-foreground hover:bg-secondary/85 hover:text-foreground"
+                                  aria-label="Действия цели"
+                                >
+                                  <MoreHoriz className="size-5" strokeWidth={2} aria-hidden />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                sideOffset={8}
+                                className="content-surface min-w-52 rounded-[20px] border-white/85 p-1.5 shadow-high"
+                              >
+                                <DropdownMenuItem
+                                  className="min-h-11 rounded-[14px] px-3 text-[15px] font-medium text-foreground focus:bg-secondary/85"
+                                  onSelect={() =>
+                                    setGoalLifecycleDialog({ goalId: goal.id, status: "completed" })
+                                  }
+                                >
+                                  Цель достигнута
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="min-h-11 rounded-[14px] px-3 text-[15px] font-medium text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                  onSelect={() =>
+                                    setGoalLifecycleDialog({ goalId: goal.id, status: "cancelled" })
+                                  }
+                                >
+                                  Отменить
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span aria-hidden />
+                          )}
                         </div>
 
                         {actions.length ? (
@@ -273,52 +299,6 @@ function GoalsScreen() {
                             </p>
                           </div>
                         )}
-
-                        {goal.status === "active" ? (
-                          <div className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-x-3">
-                            <span
-                              className="z-10 mt-3 flex size-10 items-center justify-center rounded-[16px] bg-secondary text-primary"
-                              aria-hidden
-                            >
-                              <Check className="size-[18px]" strokeWidth={2.25} />
-                            </span>
-                            <div className="space-y-1 border-t border-border/55 pt-2.5">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start rounded-2xl px-3 text-primary hover:bg-secondary/70"
-                                loading={closeGoal.isPending}
-                                onClick={() =>
-                                  closeGoal.mutate(
-                                    { goalId: goal.id, status: "completed" },
-                                    {
-                                      onSuccess: () => toast.success("Результат достигнут"),
-                                    },
-                                  )
-                                }
-                              >
-                                Результат достигнут
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start rounded-2xl px-3 text-muted-foreground hover:bg-white/85 hover:text-destructive"
-                                disabled={closeGoal.isPending}
-                                onClick={() =>
-                                  closeGoal.mutate(
-                                    { goalId: goal.id, status: "cancelled" },
-                                    {
-                                      onSuccess: () => toast.success("Результат отменён"),
-                                    },
-                                  )
-                                }
-                              >
-                                <Xmark strokeWidth={1.9} aria-hidden />
-                                Отменено
-                              </Button>
-                            </div>
-                          </div>
-                        ) : null}
                       </div>
                     );
                     return showArchive ? (
@@ -342,6 +322,70 @@ function GoalsScreen() {
           ))}
         </div>
       )}
+      <AlertDialog
+        open={goalLifecycleDialog !== null && lifecycleGoal !== null}
+        onOpenChange={(open) => {
+          if (!open && !closeGoal.isPending) setGoalLifecycleDialog(null);
+        }}
+      >
+        <AlertDialogContent>
+          {goalLifecycleDialog?.status === "completed" && lifecycleGoal ? (
+            <>
+              <div
+                className="mx-auto flex size-16 items-center justify-center rounded-full bg-occurrence-completed text-foreground shadow-mid"
+                aria-hidden
+              >
+                <Check className="size-8" strokeWidth={2.4} />
+              </div>
+              <AlertDialogHeader className="text-center sm:text-center">
+                <AlertDialogTitle>Цель достигнута!</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Поздравляем! Ты достигла цели «{lifecycleGoal.result_text}».
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <p className="text-center text-sm leading-relaxed text-muted-foreground">
+                Цель будет сохранена в архиве вместе с историей и статистикой.
+              </p>
+            </>
+          ) : lifecycleGoal ? (
+            <AlertDialogHeader>
+              <AlertDialogTitle>Отменить цель?</AlertDialogTitle>
+              <AlertDialogDescription className="leading-relaxed">
+                <span className="block">
+                  Цель «{lifecycleGoal.result_text}» будет отменена и перемещена в архив.
+                </span>
+                <span className="mt-2 block">История и статистика сохранятся.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={closeGoal.isPending}>Вернуться</AlertDialogCancel>
+            <AlertDialogAction
+              aria-busy={closeGoal.isPending}
+              disabled={closeGoal.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!goalLifecycleDialog || !lifecycleGoal || closeGoal.isPending) return;
+                closeGoal.mutate(
+                  { goalId: lifecycleGoal.id, status: goalLifecycleDialog.status },
+                  {
+                    onSuccess: () => {
+                      toast.success(
+                        goalLifecycleDialog.status === "completed"
+                          ? "Цель перемещена в архив"
+                          : "Цель отменена и перемещена в архив",
+                      );
+                      setGoalLifecycleDialog(null);
+                    },
+                  },
+                );
+              }}
+            >
+              {goalLifecycleDialog?.status === "completed" ? "В архив" : "Отменить цель"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={goalToDelete !== null}
         onOpenChange={(open) => {

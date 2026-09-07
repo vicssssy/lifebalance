@@ -50,6 +50,10 @@ function nodes(value) {
   return [value, ...nodes(value.props?.children)];
 }
 const find = (tree, type) => nodes(tree).find((n) => n.type === type);
+const findByText = (tree, type, text) =>
+  nodes(tree).find((n) => n.type === type && n.props?.children === text);
+const activeDialog = (tree) =>
+  nodes(tree).find((n) => n.type === "AlertDialog" && n.props?.open === true);
 function swipeHarness() {
   let confirmations = 0;
   const render = harness("src/components/ArchivedGoalSwipe.tsx");
@@ -131,7 +135,8 @@ test("keyboard can reveal/close and request confirmation, never through child co
 
 function goalHarness() {
   let calls = 0,
-    failure = false;
+    failure = false,
+    statusUpdate = null;
   const render = harness("src/routes/_authenticated/goals.tsx", {
     "@tanstack/react-router": {
       createFileRoute: () => (config) => ({ ...config, useSearch: () => ({}) }),
@@ -142,7 +147,11 @@ function goalHarness() {
         calls++;
         if (failure) throw new Error("Нет соединения");
       },
+      setGoalStatus: async (goalId, status, closedOn) => {
+        statusUpdate = { goalId, status, closedOn };
+      },
     },
+    "@/domain/schedule": { todayKey: () => "2026-09-07" },
     "@/hooks/useAppData": {
       useGoals: () => ({
         data: [
@@ -164,7 +173,12 @@ function goalHarness() {
       }),
     },
   });
-  return { render, calls: () => calls, fail: () => (failure = true) };
+  return {
+    render,
+    calls: () => calls,
+    fail: () => (failure = true),
+    statusUpdate: () => statusUpdate,
+  };
 }
 
 test("only Archive offers delete; cancel is inert; confirm hides card after server acknowledgement", async () => {
@@ -172,18 +186,20 @@ test("only Archive offers delete; cancel is inert; confirm hides card after serv
   assert.equal(find(h.render(), "ArchivedGoalSwipe"), undefined);
   h.render().props.right.props.onClick();
   find(h.render(), "ArchivedGoalSwipe").props.onRequestDelete();
-  assert.equal(find(h.render(), "AlertDialog").props.open, true);
+  assert.equal(activeDialog(h.render()).props.open, true);
   assert.equal(h.calls(), 0);
-  find(h.render(), "AlertDialog").props.onOpenChange(false);
-  assert.equal(find(h.render(), "AlertDialog").props.open, false);
+  activeDialog(h.render()).props.onOpenChange(false);
+  assert.equal(activeDialog(h.render()), undefined);
   assert.ok(find(h.render(), "ArchivedGoalSwipe"));
   assert.equal(h.calls(), 0);
   find(h.render(), "ArchivedGoalSwipe").props.onRequestDelete();
-  find(h.render(), "AlertDialogAction").props.onClick({ preventDefault() {} });
+  findByText(activeDialog(h.render()), "AlertDialogAction", "Удалить").props.onClick({
+    preventDefault() {},
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(h.calls(), 1);
   assert.equal(find(h.render(), "ArchivedGoalSwipe"), undefined);
-  assert.equal(find(h.render(), "AlertDialog").props.open, false);
+  assert.equal(activeDialog(h.render()), undefined);
 });
 
 test("failed deletion preserves archived card and confirmation with error", async () => {
@@ -191,12 +207,78 @@ test("failed deletion preserves archived card and confirmation with error", asyn
   h.fail();
   h.render().props.right.props.onClick();
   find(h.render(), "ArchivedGoalSwipe").props.onRequestDelete();
-  find(h.render(), "AlertDialogAction").props.onClick({ preventDefault() {} });
+  findByText(activeDialog(h.render()), "AlertDialogAction", "Удалить").props.onClick({
+    preventDefault() {},
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.ok(find(h.render(), "ArchivedGoalSwipe"));
-  assert.equal(find(h.render(), "AlertDialog").props.open, true);
+  assert.equal(activeDialog(h.render()).props.open, true);
   assert.equal(
     nodes(h.render()).find((n) => n.props?.role === "alert").props.children,
     "Нет соединения",
   );
+});
+
+test("active Goal uses the menu and confirmation before the existing archive lifecycle", async () => {
+  const h = goalHarness();
+  assert.equal(h.render().props.title, "Мои цели");
+  assert.equal(h.render().props.subtitle, "То, к чему ты сейчас идёшь");
+  assert.equal(findByText(h.render(), "p", "Цель").props.children, "Цель");
+  assert.equal(
+    findByText(h.render(), "DropdownMenuItem", "Цель достигнута").props.children,
+    "Цель достигнута",
+  );
+  assert.equal(findByText(h.render(), "DropdownMenuItem", "Результат достигнут"), undefined);
+  assert.equal(findByText(h.render(), "DropdownMenuItem", "Отменено"), undefined);
+  findByText(h.render(), "DropdownMenuItem", "Цель достигнута").props.onSelect();
+  assert.equal(
+    findByText(activeDialog(h.render()), "AlertDialogTitle", "Цель достигнута!").props.children,
+    "Цель достигнута!",
+  );
+  assert.equal(
+    findByText(activeDialog(h.render()), "AlertDialogAction", "В архив").props.children,
+    "В архив",
+  );
+  findByText(activeDialog(h.render()), "AlertDialogAction", "В архив").props.onClick({
+    preventDefault() {},
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(h.statusUpdate(), {
+    goalId: "active",
+    status: "completed",
+    closedOn: "2026-09-07",
+  });
+});
+
+test("cancelling an active Goal requires its own confirmation", async () => {
+  const h = goalHarness();
+  findByText(h.render(), "DropdownMenuItem", "Отменить").props.onSelect();
+  const dialog = activeDialog(h.render());
+  assert.equal(
+    findByText(dialog, "AlertDialogTitle", "Отменить цель?").props.children,
+    "Отменить цель?",
+  );
+  assert.equal(
+    findByText(dialog, "AlertDialogAction", "Отменить цель").props.children,
+    "Отменить цель",
+  );
+  findByText(dialog, "AlertDialogAction", "Отменить цель").props.onClick({
+    preventDefault() {},
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(h.statusUpdate(), {
+    goalId: "active",
+    status: "cancelled",
+    closedOn: "2026-09-07",
+  });
+});
+
+test("returning from a Goal lifecycle dialog changes nothing", () => {
+  const h = goalHarness();
+  findByText(h.render(), "DropdownMenuItem", "Отменить").props.onSelect();
+  const dialog = activeDialog(h.render());
+  findByText(dialog, "AlertDialogCancel", "Вернуться").props.onClick?.();
+  dialog.props.onOpenChange(false);
+  assert.equal(activeDialog(h.render()), undefined);
+  assert.equal(h.statusUpdate(), null);
 });
