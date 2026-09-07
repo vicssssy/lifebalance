@@ -133,7 +133,7 @@ export function OccurrenceCard({
             onToggle?.(occurrence, !completed);
           }}
           disabled={!onToggle}
-          className="focus-ring touch-target mr-0.5 flex shrink-0 items-center justify-center rounded-full"
+          className="focus-ring touch-target mr-2 flex shrink-0 items-center justify-center rounded-full"
         >
           <span
             className={cn(

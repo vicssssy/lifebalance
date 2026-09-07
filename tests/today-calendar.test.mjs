@@ -227,6 +227,10 @@ for (const type of types)
       const buttons = nodes(card).filter((n) => n.type === "button");
       assert.equal(buttons.length, 1, "no drag handle");
       assert.equal(buttons[0].props["aria-pressed"], completed);
+      assert.ok(
+        buttons[0].props.className.includes("mr-2"),
+        "completion control has right breathing room",
+      );
       const completionCircle = nodes(card).find(
         (n) => n.type === "span" && n.props?.className?.includes("size-7"),
       );
