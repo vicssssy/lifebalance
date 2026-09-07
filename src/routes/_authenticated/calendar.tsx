@@ -33,6 +33,7 @@ function CalendarScreen() {
           onChange={setSelected}
           multiple={false}
           getProgress={(day) => completionProgressForDate(source, day)}
+          alignCalendarRightEdge
         />
         {isLoading ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Загружаем план…</p>
@@ -42,6 +43,7 @@ function CalendarScreen() {
             occurrences={occurrences}
             emptyText="На этот день ничего не запланировано."
             allowDrag={false}
+            completionControlClassName="mr-2.5"
           />
         )}
       </div>

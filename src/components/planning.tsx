@@ -20,6 +20,7 @@ import {
 } from "@/domain/schedule";
 import type { LifeArea } from "@/domain/types";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
+import { cn } from "@/lib/utils";
 
 /** Дни недели для повторяющихся форматов. */
 export function WeekdayPicker({
@@ -60,11 +61,14 @@ export function DayPicker({
   onChange,
   multiple = true,
   getProgress,
+  alignCalendarRightEdge = false,
 }: {
   value: string[];
   onChange: (value: string[]) => void;
   multiple?: boolean;
   getProgress?: (date: string) => { planned: number; completed: number };
+  /** Совмещает навигацию с визуальной границей крайней даты в месячной сетке. */
+  alignCalendarRightEdge?: boolean;
 }) {
   const [month, setMonth] = useState(() => {
     const first = value[0] ? fromDateKey(value[0]) : new Date();
@@ -75,7 +79,12 @@ export function DayPicker({
 
   return (
     <div className="content-surface rounded-[30px] p-3.5">
-      <div className="flex items-center justify-between px-0.5 pb-3">
+      <div
+        className={cn(
+          "flex items-center justify-between pb-3",
+          alignCalendarRightEdge ? "px-1" : "px-0.5",
+        )}
+      >
         <button
           type="button"
           onClick={() => setMonth(addMonths(month, -1))}
