@@ -40,7 +40,7 @@ type LifeAreaIconConfig = {
 };
 
 function Glyph({ Icon, className }: { Icon: PhosphorIcon; className?: string }) {
-  return <Icon size="100%" weight="light" className={className} aria-hidden="true" />;
+  return <Icon size="100%" weight="regular" className={className} aria-hidden="true" />;
 }
 
 function IconComposition({ children, className }: React.PropsWithChildren<GlyphProps>) {

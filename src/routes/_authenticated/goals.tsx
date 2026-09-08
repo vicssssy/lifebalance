@@ -31,6 +31,7 @@ import { todayKey } from "@/domain/schedule";
 import { useGoals, useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
+import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -159,12 +160,7 @@ function GoalsScreen() {
             <section key={area.id}>
               {!selectedArea ? (
                 <div className="mb-3 flex min-w-0 items-center gap-2.5 px-1">
-                  <span
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-secondary/80 text-primary shadow-low"
-                    aria-hidden
-                  >
-                    <Trophy className="size-[18px]" strokeWidth={1.75} />
-                  </span>
+                  <LifeAreaIconFrame area={area} className="size-10 rounded-[16px]" />
                   <LifeAreaCategoryLink
                     area={area}
                     className="min-h-11 w-full min-w-0 justify-between text-[17px] leading-tight tracking-[-0.012em] [&>span]:min-w-0 [&>span]:break-words [&>svg]:size-5"
