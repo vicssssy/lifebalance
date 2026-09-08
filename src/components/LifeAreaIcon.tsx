@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Circle,
   Coins,
   CompassRose,
   Diamond,
@@ -30,7 +31,7 @@ import { cn } from "@/lib/utils";
  */
 
 type LifeAreaIconId = LifeArea["id"];
-type GlyphProps = { className?: string };
+type GlyphProps = { className?: string | undefined };
 
 type LifeAreaIconComponent = (props: GlyphProps) => React.JSX.Element;
 
@@ -39,7 +40,7 @@ type LifeAreaIconConfig = {
   phosphorIcons: readonly string[];
 };
 
-function Glyph({ Icon, className }: { Icon: PhosphorIcon; className?: string }) {
+function Glyph({ Icon, className }: { Icon: PhosphorIcon } & GlyphProps) {
   return <Icon size="100%" weight="regular" className={className} aria-hidden="true" />;
 }
 
@@ -130,6 +131,15 @@ function SunWaveIcon({ className }: GlyphProps) {
   );
 }
 
+function FallbackLifeAreaIcon(props: GlyphProps) {
+  return <Glyph Icon={Circle} {...props} />;
+}
+
+const FALLBACK_LIFE_AREA_ICON_CONFIG: LifeAreaIconConfig = {
+  Icon: FallbackLifeAreaIcon,
+  phosphorIcons: ["Circle"],
+};
+
 /** Canonical Phosphor-only icon ownership for every persisted Life Area id. */
 // eslint-disable-next-line react-refresh/only-export-components
 export const LIFE_AREA_ICON_CONFIG: Record<LifeAreaIconId, LifeAreaIconConfig> = {
@@ -147,20 +157,36 @@ export const LIFE_AREA_ICON_CONFIG: Record<LifeAreaIconId, LifeAreaIconConfig> =
   lifestyle: { Icon: SunWaveIcon, phosphorIcons: ["SunHorizon", "Waves"] },
 };
 
+function getLifeAreaIconConfig(id: LifeAreaIconId): LifeAreaIconConfig {
+  return LIFE_AREA_ICON_CONFIG[id] ?? FALLBACK_LIFE_AREA_ICON_CONFIG;
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function getLifeAreaPresentation(area: LifeArea) {
   return {
     ...area,
-    Icon: LIFE_AREA_ICON_CONFIG[area.id].Icon,
+    Icon: getLifeAreaIconConfig(area.id).Icon,
   };
 }
 
-export function LifeAreaIcon({ id, className }: { id: LifeAreaIconId; className?: string }) {
-  const Icon = LIFE_AREA_ICON_CONFIG[id].Icon;
+export function LifeAreaIcon({
+  id,
+  className,
+}: {
+  id: LifeAreaIconId;
+  className?: string | undefined;
+}) {
+  const Icon = getLifeAreaIconConfig(id).Icon;
   return <Icon className={className} />;
 }
 
-export function LifeAreaIconFrame({ area, className }: { area: LifeArea; className?: string }) {
+export function LifeAreaIconFrame({
+  area,
+  className,
+}: {
+  area: LifeArea;
+  className?: string | undefined;
+}) {
   return (
     <span
       className={cn(

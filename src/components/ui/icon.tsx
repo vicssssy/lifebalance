@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { ComponentProps } from "react";
 import { Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +12,7 @@ export function Icon({
   size = "md",
   className,
   ...props
-}: { icon: AppIcon; size?: keyof typeof SIZES } & Omit<SVGProps<SVGSVGElement>, "ref">) {
+}: { icon: AppIcon; size?: keyof typeof SIZES } & Omit<ComponentProps<AppIcon>, "ref" | "size">) {
   return (
     <Component
       width={SIZES[size]}

@@ -171,7 +171,10 @@ for (const type of types) {
       ),
     );
     assert.ok(!nodes(tree).some((n) => n.type === "StickyActions"));
-    if (["ritual", "regular_action"].includes(type)) assert.ok(text(tree).includes("Пн, Вс"));
+    if (["ritual", "regular_action"].includes(type)) {
+      const weekdaySchedule = nodes(tree).find((n) => n.type === "WeekdaySchedule");
+      assert.deepEqual(weekdaySchedule.props.value, [1, 7]);
+    }
     if (type === "time_slot") {
       assert.ok(text(tree).includes("10:00–12:00"));
       assert.ok(text(tree).includes("8 сентября"));

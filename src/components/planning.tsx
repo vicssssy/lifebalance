@@ -23,6 +23,12 @@ import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 import { cn } from "@/lib/utils";
 
+const weekdayPickerClassName = "content-surface flex gap-1.5 rounded-[24px] p-1.5";
+const weekdayBaseClassName =
+  "flex h-11 flex-1 items-center justify-center rounded-[18px] border text-sm font-semibold";
+const weekdayStateClassName = (active: boolean) =>
+  active ? "accent-control border-primary" : "border-transparent bg-white/60 text-muted-foreground";
+
 /** Дни недели для повторяющихся форматов. */
 export function WeekdayPicker({
   value,
@@ -32,7 +38,7 @@ export function WeekdayPicker({
   onChange: (value: number[]) => void;
 }) {
   return (
-    <div className="content-surface flex gap-1.5 rounded-[24px] p-1.5">
+    <div className={weekdayPickerClassName}>
       {WEEKDAYS.map((day) => {
         const active = value.includes(day.value);
         return (
@@ -42,14 +48,30 @@ export function WeekdayPicker({
             onClick={() =>
               onChange(active ? value.filter((v) => v !== day.value) : [...value, day.value].sort())
             }
-            className={`flex h-11 flex-1 items-center justify-center rounded-[18px] border text-sm font-semibold transition-[background-color,border-color,color,transform,box-shadow] duration-200 active:scale-95 ${
-              active
-                ? "accent-control border-primary"
-                : "border-transparent bg-white/60 text-muted-foreground"
-            }`}
+            className={`${weekdayBaseClassName} transition-[background-color,border-color,color,transform,box-shadow] duration-200 active:scale-95 ${weekdayStateClassName(active)}`}
           >
             {day.short}
           </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Статичное отображение выбранных дней недели в деталях действия. */
+export function WeekdaySchedule({ value }: { value: number[] }) {
+  return (
+    <div className={weekdayPickerClassName} aria-label="Дни недели">
+      {WEEKDAYS.map((day) => {
+        const active = value.includes(day.value);
+        return (
+          <span
+            key={day.value}
+            className={`${weekdayBaseClassName} ${weekdayStateClassName(active)}`}
+            aria-label={`${day.short}: ${active ? "выбрано" : "не выбрано"}`}
+          >
+            {day.short}
+          </span>
         );
       })}
     </div>

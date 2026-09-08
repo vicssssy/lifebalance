@@ -20,7 +20,7 @@ import {
   unmarkActionCompleted,
 } from "@/data/completions";
 import { rescheduleAction } from "@/data/schedules";
-import { ACTION_FORMAT_NAME, WEEKDAYS } from "@/domain/constants";
+import { ACTION_FORMAT_NAME } from "@/domain/constants";
 import {
   formatDayLong,
   formatDayShort,
@@ -33,7 +33,7 @@ import {
 import { useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { ActionForm, type ActionFormValues } from "@/components/ActionForm";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
-import { DayPicker } from "@/components/planning";
+import { DayPicker, WeekdaySchedule } from "@/components/planning";
 import { DurationWheels, PickerSheet } from "@/components/pickers";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { occurrencesForDate } from "@/domain/occurrences";
@@ -446,19 +446,17 @@ function ActionDetail() {
               <div className="content-surface divide-y divide-border/60 rounded-[24px] px-4">
                 {schedules.map((entry) => {
                   const seconds = entry.duration_seconds ?? action.duration_seconds;
+                  const weekly = entry.repeat_type === "weekly" && entry.weekdays.length > 0;
                   const days =
-                    entry.repeat_type === "weekly"
-                      ? WEEKDAYS.filter((day) => entry.weekdays.includes(day.value))
-                          .map((day) => day.short)
-                          .join(", ")
-                      : entry.scheduled_date
-                        ? formatDayShort(fromDateKey(entry.scheduled_date))
-                        : "";
+                    entry.repeat_type === "once" && entry.scheduled_date
+                      ? formatDayShort(fromDateKey(entry.scheduled_date))
+                      : "";
                   const time = timeLabel(entry.start_time, seconds);
                   const duration = formatDuration(seconds);
-                  if (!days && !time && !duration) return null;
+                  if (!weekly && !days && !time && !duration) return null;
                   return (
                     <div key={entry.id} className="space-y-1 py-3">
+                      {weekly ? <WeekdaySchedule value={entry.weekdays} /> : null}
                       {days ? <p className="text-base font-medium">{days}</p> : null}
                       {time || duration ? (
                         <p className="text-sm text-muted-foreground">
