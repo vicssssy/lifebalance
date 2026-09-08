@@ -41,6 +41,8 @@ const actionSchema = z.object({
   why_important: nullableText(),
   helps_with: nullableText(),
   start_date: dateKey,
+  reminder_enabled: z.boolean().default(false),
+  reminder_time: z.string().regex(TIME_VALUE).nullable().default(null),
   archived_at: nullableText(100),
   created_at: z.string().min(1).max(100),
 });
@@ -174,6 +176,8 @@ const actionDraftSchema = z.object({
   whyImportant: nullableText(),
   helpsWith: nullableText(),
   startDate: dateKey,
+  reminderEnabled: z.boolean(),
+  reminderTime: z.string().regex(TIME_VALUE).nullable(),
   lifeAreaIds: z.array(id).max(3),
   ritualItems: z
     .array(
@@ -212,6 +216,8 @@ const actionConfigurationDraftSchema = z.object({
   durationSeconds: nullableNumber,
   whyImportant: nullableText(),
   startDate: dateKey,
+  reminderEnabled: z.boolean(),
+  reminderTime: z.string().regex(TIME_VALUE).nullable(),
   lifeAreaIds: z.array(id).max(3),
   ritualItems: z
     .array(
@@ -604,7 +610,7 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
       .bind(workspaceId),
     db
       .prepare(
-        "SELECT id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, archived_at, created_at FROM actions WHERE workspace_id = ? ORDER BY created_at DESC",
+        "SELECT id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, reminder_enabled, reminder_time, archived_at, created_at FROM actions WHERE workspace_id = ? ORDER BY created_at DESC",
       )
       .bind(workspaceId),
     db
@@ -866,6 +872,8 @@ async function mutate(
         why_important: draft.whyImportant,
         helps_with: draft.helpsWith,
         start_date: draft.startDate,
+        reminder_enabled: draft.reminderEnabled,
+        reminder_time: draft.reminderEnabled ? draft.reminderTime : null,
         archived_at: null,
         created_at: now,
       };
@@ -889,7 +897,7 @@ async function mutate(
       statements.push(
         db
           .prepare(
-            "INSERT INTO actions (id, workspace_id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
+            "INSERT INTO actions (id, workspace_id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, reminder_enabled, reminder_time, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
           )
           .bind(
             action.id,
@@ -902,6 +910,8 @@ async function mutate(
             action.why_important,
             action.helps_with,
             action.start_date,
+            action.reminder_enabled ? 1 : 0,
+            action.reminder_time,
             action.created_at,
           ),
       );
@@ -1014,7 +1024,7 @@ async function mutate(
       const statements: D1PreparedStatement[] = [
         db
           .prepare(
-            "UPDATE actions SET name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ? WHERE id = ? AND workspace_id = ?",
+            "UPDATE actions SET name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ?, reminder_enabled = ?, reminder_time = ? WHERE id = ? AND workspace_id = ?",
           )
           .bind(
             draft.name.trim(),
@@ -1022,6 +1032,8 @@ async function mutate(
             draft.durationSeconds,
             draft.whyImportant,
             draft.startDate,
+            draft.reminderEnabled ? 1 : 0,
+            draft.reminderEnabled ? draft.reminderTime : null,
             operation.actionId,
             workspaceId,
           ),
@@ -1480,5 +1492,56 @@ export async function handleWorkspaceApi(request: Request, db: D1Database): Prom
     }
     console.error(JSON.stringify({ event: "workspace_api_error", error }));
     return json({ error: "Не удалось обработать запрос." }, 500);
+  }
+}
+
+const pushSubscriptionSchema = z.object({
+  subscription: z.object({
+    endpoint: z.string().url().max(4_000),
+    keys: z.object({ p256dh: z.string().min(1).max(1_000), auth: z.string().min(1).max(1_000) }),
+  }),
+  timezone: z.string().min(1).max(100),
+});
+
+/** Registers one browser/device for real Web Push delivery. */
+export async function handlePushSubscriptionApi(
+  request: Request,
+  db: D1Database,
+  publicKey: string | undefined,
+): Promise<Response> {
+  if (!sameOrigin(request)) return json({ error: "Запрос из другого источника отклонён." }, 403);
+  if (!publicKey) return json({ error: "Уведомления ещё не настроены на сервере." }, 503);
+  if (request.method === "GET") return json({ publicKey });
+  if (request.method !== "POST") return json({ error: "Метод не поддерживается." }, 405);
+  const workspaceId = cookieValue(request);
+  if (!workspaceId) return json({ error: "Сначала откройте приложение." }, 400);
+  try {
+    const payload = pushSubscriptionSchema.parse(await request.json());
+    const workspace = await db
+      .prepare("SELECT id FROM workspaces WHERE id = ?")
+      .bind(workspaceId)
+      .first();
+    if (!workspace) return json({ error: "Рабочее пространство не найдено." }, 404);
+    const now = new Date().toISOString();
+    await db
+      .prepare(
+        "INSERT INTO push_subscriptions (id, workspace_id, endpoint, p256dh, auth, timezone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET workspace_id = excluded.workspace_id, p256dh = excluded.p256dh, auth = excluded.auth, timezone = excluded.timezone, updated_at = excluded.updated_at",
+      )
+      .bind(
+        crypto.randomUUID(),
+        workspaceId,
+        payload.subscription.endpoint,
+        payload.subscription.keys.p256dh,
+        payload.subscription.keys.auth,
+        payload.timezone,
+        now,
+        now,
+      )
+      .run();
+    return json({ ok: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) return json({ error: "Некорректные данные устройства." }, 400);
+    console.error(JSON.stringify({ event: "push_subscription_error", error }));
+    return json({ error: "Не удалось сохранить устройство." }, 500);
   }
 }

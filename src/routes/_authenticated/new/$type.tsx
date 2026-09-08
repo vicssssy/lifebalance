@@ -54,6 +54,8 @@ function CreateAction() {
       whyImportant: values.whyImportant,
       helpsWith: null,
       startDate: values.startDate,
+      reminderEnabled: values.reminderEnabled,
+      reminderTime: values.reminderTime,
       lifeAreaIds: values.lifeAreaIds,
       ritualItems: values.ritualItems,
       attachments: values.attachments,

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Xmark as X } from "@/components/ui/icons";
+import { toast } from "sonner";
+import { Bell, Plus, Xmark as X } from "@/components/ui/icons";
 import { RECURRING_TYPES, type ActionType } from "@/domain/constants";
 import { todayKey } from "@/domain/schedule";
 import type { Attachment, LifeArea, RitualItem, Schedule } from "@/domain/types";
@@ -15,6 +16,8 @@ import {
   type AttachmentDraft,
 } from "@/components/planning";
 import { StickyActions } from "@/components/StickyActions";
+import { Switch } from "@/components/ui/switch";
+import { enableDeviceReminders } from "@/lib/reminders";
 
 export interface ActionFormRitualItem {
   id?: string;
@@ -41,6 +44,8 @@ export interface ActionFormValues {
   durationSeconds: number | null;
   whyImportant: string | null;
   startDate: string;
+  reminderEnabled: boolean;
+  reminderTime: string | null;
   lifeAreaIds: string[];
   ritualItems: Array<{
     id?: string;
@@ -57,6 +62,8 @@ export interface ActionFormInitialValues {
   durationSeconds?: number | null;
   whyImportant?: string | null;
   startDate?: string;
+  reminderEnabled?: boolean;
+  reminderTime?: string | null;
   lifeAreaIds?: string[];
   ritualItems?: RitualItem[];
   attachments?: Attachment[];
@@ -101,6 +108,10 @@ export function ActionForm({
   const [startTime, setStartTime] = useState<string | null>(
     initialSchedules[0]?.start_time ?? null,
   );
+  const [reminderEnabled, setReminderEnabled] = useState(initial?.reminderEnabled ?? false);
+  const [reminderTime, setReminderTime] = useState<string | null>(
+    initial?.reminderTime ?? initialSchedules[0]?.start_time ?? null,
+  );
   const [weekdays, setWeekdays] = useState<number[]>(initialSchedules[0]?.weekdays ?? []);
   const [dates, setDates] = useState<string[]>(
     recurring
@@ -126,6 +137,7 @@ export function ActionForm({
     Boolean(name.trim()) &&
     Boolean(startDate) &&
     (recurring ? weekdays.length > 0 : selectedDates.length > 0) &&
+    (!reminderEnabled || Boolean(startTime ?? reminderTime)) &&
     (type !== "ritual" || items.some((item) => item.name.trim()));
 
   const submit = () => {
@@ -161,6 +173,8 @@ export function ActionForm({
       durationSeconds,
       whyImportant: whyImportant.trim() || null,
       startDate,
+      reminderEnabled,
+      reminderTime: reminderEnabled ? (startTime ?? reminderTime) : null,
       lifeAreaIds,
       ritualItems:
         type === "ritual"
@@ -281,6 +295,52 @@ export function ActionForm({
         <TimeField value={startTime} onChange={setStartTime} />
       </Field>
 
+      <Field label="Напоминание">
+        <div className="content-surface rounded-[26px] p-4">
+          <div className="flex min-h-11 items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Bell className="size-5" />
+              </span>
+              <span className="text-base font-semibold">Установить напоминание</span>
+            </div>
+            <Switch
+              checked={reminderEnabled}
+              onCheckedChange={async (checked) => {
+                if (!checked) {
+                  setReminderEnabled(false);
+                  return;
+                }
+                try {
+                  const status = await enableDeviceReminders();
+                  if (status !== "granted") {
+                    toast.error(
+                      status === "denied"
+                        ? "Системные уведомления отключены в настройках устройства."
+                        : "Этот браузер не поддерживает системные уведомления.",
+                    );
+                    return;
+                  }
+                  setReminderEnabled(true);
+                  if (!reminderTime) setReminderTime(startTime);
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : "Не удалось включить уведомления.",
+                  );
+                }
+              }}
+              aria-label="Установить напоминание"
+            />
+          </div>
+          {reminderEnabled && !startTime ? (
+            <div className="mt-3 border-t border-border/70 pt-3">
+              <p className="mb-2 text-sm text-muted-foreground">Время напоминания</p>
+              <TimeField value={reminderTime} onChange={setReminderTime} />
+            </div>
+          ) : null}
+        </div>
+      </Field>
+
       <Field label="Продолжительность">
         <DurationPicker seconds={durationSeconds} onChange={setDurationSeconds} />
       </Field>
@@ -302,7 +362,15 @@ export function ActionForm({
         <AttachmentsField value={attachments} onChange={setAttachments} />
       </Field>
 
-      <StickyActions hint={canSave ? undefined : "Заполни название и выбери, когда это делать"}>
+      <StickyActions
+        hint={
+          canSave
+            ? undefined
+            : reminderEnabled && !startTime && !reminderTime
+              ? "Выбери время напоминания"
+              : "Заполни название и выбери, когда это делать"
+        }
+      >
         <PrimaryButton
           onClick={submit}
           disabled={!canSave || Boolean(submitting)}

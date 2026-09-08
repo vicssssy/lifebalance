@@ -213,6 +213,8 @@ function ActionDetail() {
               durationSeconds: action.duration_seconds,
               whyImportant: action.why_important,
               startDate: action.start_date,
+              reminderEnabled: action.reminder_enabled,
+              reminderTime: action.reminder_time,
               lifeAreaIds: actionAreaIds,
               ritualItems: items,
               attachments,

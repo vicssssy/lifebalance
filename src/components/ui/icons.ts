@@ -4,6 +4,7 @@
  */
 export {
   Archive,
+  Bell,
   ArrowLeft,
   ArrowRight,
   ArrowSquareOut as OpenNewWindow,

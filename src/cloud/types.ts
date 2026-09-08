@@ -35,6 +35,8 @@ export interface CloudActionDraft {
   whyImportant: string | null;
   helpsWith: string | null;
   startDate: string;
+  reminderEnabled: boolean;
+  reminderTime: string | null;
   lifeAreaIds: string[];
   ritualItems: Array<{
     name: string;
@@ -56,6 +58,8 @@ export interface CloudActionConfigurationDraft {
   durationSeconds: number | null;
   whyImportant: string | null;
   startDate: string;
+  reminderEnabled: boolean;
+  reminderTime: string | null;
   lifeAreaIds: string[];
   ritualItems: Array<{
     id?: string;

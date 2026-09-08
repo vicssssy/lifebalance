@@ -2,7 +2,14 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { handleWorkspaceApi } from "./cloud/workspace-api";
+import { handlePushSubscriptionApi, handleWorkspaceApi } from "./cloud/workspace-api";
+import { deliverDueReminders } from "./cloud/reminder-delivery";
+
+type RuntimeEnv = Cloudflare.Env & {
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
+};
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -49,8 +56,9 @@ export default {
   async fetch(request: Request, env: Cloudflare.Env | undefined, ctx: unknown) {
     try {
       if (new URL(request.url).pathname === "/api/workspace") {
-        const runtimeEnv =
-          env ?? (globalThis as typeof globalThis & { __env__?: Cloudflare.Env }).__env__;
+        const runtimeEnv = (env ??
+          (globalThis as typeof globalThis & { __env__?: Cloudflare.Env }).__env__) as
+          RuntimeEnv | undefined;
         if (!runtimeEnv?.DB) {
           return Response.json(
             { error: "Cloudflare D1 binding недоступен." },
@@ -58,6 +66,14 @@ export default {
           );
         }
         return await handleWorkspaceApi(request, runtimeEnv.DB);
+      }
+      if (new URL(request.url).pathname === "/api/push-subscription") {
+        const runtimeEnv = (env ??
+          (globalThis as typeof globalThis & { __env__?: Cloudflare.Env }).__env__) as
+          RuntimeEnv | undefined;
+        if (!runtimeEnv?.DB)
+          return Response.json({ error: "Cloudflare D1 binding недоступен." }, { status: 503 });
+        return await handlePushSubscriptionApi(request, runtimeEnv.DB, runtimeEnv.VAPID_PUBLIC_KEY);
       }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
@@ -69,5 +85,8 @@ export default {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
+  },
+  async scheduled(_controller: ScheduledController, env: RuntimeEnv) {
+    if (env.DB) await deliverDueReminders(env.DB, env);
   },
 };

@@ -511,6 +511,8 @@ export async function createLocalPreviewAction(
     why_important: draft.whyImportant,
     helps_with: draft.helpsWith,
     start_date: draft.startDate,
+    reminder_enabled: false,
+    reminder_time: null,
     archived_at: null,
     created_at: createdAt,
   };
