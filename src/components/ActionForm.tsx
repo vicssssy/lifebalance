@@ -16,6 +16,12 @@ import {
   type AttachmentDraft,
 } from "@/components/planning";
 import { StickyActions } from "@/components/StickyActions";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { enableDeviceReminders } from "@/lib/reminders";
 
@@ -133,6 +139,14 @@ export function ActionForm({
   );
 
   const selectedDates = dates.length ? dates : recurring ? [] : [todayKey()];
+  const hasAdditionalDetails =
+    lifeAreaIds.length > 0 || Boolean(whyImportant.trim()) || attachments.length > 0;
+  const additionalSummary = [
+    lifeAreaIds.length ? `Сфер: ${lifeAreaIds.length}` : null,
+    attachments.length ? `Материалов: ${attachments.length}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const canSave =
     Boolean(name.trim()) &&
     Boolean(startDate) &&
@@ -345,22 +359,43 @@ export function ActionForm({
         <DurationPicker seconds={durationSeconds} onChange={setDurationSeconds} />
       </Field>
 
-      <Field label="Сферы жизни" hint="Максимум три сферы.">
-        <LifeAreaPicker areas={areas} value={lifeAreaIds} onChange={setLifeAreaIds} />
-      </Field>
+      <Accordion
+        type="single"
+        collapsible
+        {...(hasAdditionalDetails ? { defaultValue: "additional" } : {})}
+        className="content-surface rounded-[26px] px-4"
+      >
+        <AccordionItem value="additional" className="border-0">
+          <AccordionTrigger className="min-h-12 py-3 text-base font-semibold hover:no-underline">
+            <span className="space-y-0.5">
+              <span className="block">Дополнительно</span>
+              {additionalSummary ? (
+                <span className="block text-sm font-normal text-muted-foreground">
+                  {additionalSummary}
+                </span>
+              ) : null}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <Field label="Сферы жизни" hint="Максимум три сферы.">
+              <LifeAreaPicker areas={areas} value={lifeAreaIds} onChange={setLifeAreaIds} />
+            </Field>
 
-      <Field label="Почему это важно для тебя">
-        <TextField
-          value={whyImportant}
-          onChange={setWhyImportant}
-          placeholder="Например, так я забочусь о себе"
-          multiline
-        />
-      </Field>
+            <Field label="Почему это важно для тебя">
+              <TextField
+                value={whyImportant}
+                onChange={setWhyImportant}
+                placeholder="Например, так я забочусь о себе"
+                multiline
+              />
+            </Field>
 
-      <Field label="Материалы">
-        <AttachmentsField value={attachments} onChange={setAttachments} />
-      </Field>
+            <Field label="Материалы">
+              <AttachmentsField value={attachments} onChange={setAttachments} />
+            </Field>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <StickyActions
         hint={
