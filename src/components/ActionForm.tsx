@@ -59,6 +59,7 @@ export interface ActionFormValues {
   durationSeconds: number | null;
   whyImportant: string | null;
   startDate: string;
+  endDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string | null;
   lifeAreaIds: string[];
@@ -78,6 +79,7 @@ export interface ActionFormInitialValues {
   durationSeconds?: number | null;
   whyImportant?: string | null;
   startDate?: string;
+  endDate?: string | null;
   reminderEnabled?: boolean;
   reminderTime?: string | null;
   lifeAreaIds?: string[];
@@ -121,6 +123,7 @@ export function ActionForm({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [whyImportant, setWhyImportant] = useState(initial?.whyImportant ?? "");
   const [startDate, setStartDate] = useState(initial?.startDate ?? todayKey());
+  const [endDate, setEndDate] = useState<string | null>(initial?.endDate ?? null);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(
     initial?.durationSeconds ?? initialSchedules[0]?.duration_seconds ?? null,
   );
@@ -153,6 +156,7 @@ export function ActionForm({
 
   const selectedDates = dates.length ? dates : recurring ? [] : [todayKey()];
   const activeGoals = goals.filter((goal) => goal.status === "active");
+  const invalidDateRange = Boolean(endDate && endDate < startDate);
   const hasAdditionalDetails =
     Boolean(goalId) ||
     lifeAreaIds.length > 0 ||
@@ -167,6 +171,7 @@ export function ActionForm({
   const canSave =
     Boolean(name.trim()) &&
     Boolean(startDate) &&
+    !invalidDateRange &&
     (recurring ? weekdays.length > 0 : selectedDates.length > 0) &&
     (!reminderEnabled || Boolean(startTime ?? reminderTime)) &&
     (type !== "ritual" || items.some((item) => item.name.trim()));
@@ -205,6 +210,7 @@ export function ActionForm({
       durationSeconds,
       whyImportant: whyImportant.trim() || null,
       startDate,
+      endDate: recurring ? endDate : null,
       reminderEnabled,
       reminderTime: reminderEnabled ? (startTime ?? reminderTime) : null,
       lifeAreaIds,
@@ -296,14 +302,30 @@ export function ActionForm({
         </Field>
       ) : null}
 
-      <Field label="Дата начала">
-        <CompactDatePicker value={startDate} onChange={setStartDate} />
-      </Field>
-
       {recurring ? (
-        <Field label="Дни недели" hint="Действие будет появляться в выбранные дни каждую неделю.">
-          <WeekdayPicker value={weekdays} onChange={setWeekdays} />
-        </Field>
+        <>
+          <Field label="Дата начала">
+            <CompactDatePicker
+              value={startDate}
+              onChange={(value) => {
+                if (value) setStartDate(value);
+              }}
+            />
+          </Field>
+
+          <Field label="Дата завершения">
+            <CompactDatePicker value={endDate} onChange={setEndDate} emptyLabel="Не ограничена" />
+            {invalidDateRange ? (
+              <p className="text-sm text-destructive" role="alert">
+                Дата завершения не может быть раньше даты начала.
+              </p>
+            ) : null}
+          </Field>
+
+          <Field label="Дни недели" hint="Действие будет появляться в выбранные дни каждую неделю.">
+            <WeekdayPicker value={weekdays} onChange={setWeekdays} />
+          </Field>
+        </>
       ) : (
         <Field
           label={type === "time_slot" ? "Дни" : "День"}
@@ -313,13 +335,24 @@ export function ActionForm({
               : "Выбери день, когда это нужно сделать."
           }
         >
-          <DayPicker value={selectedDates} onChange={setDates} multiple={type === "time_slot"} />
+          <DayPicker
+            value={selectedDates}
+            onChange={(next) => {
+              setDates(next);
+              if (next[0]) setStartDate(next[0]);
+            }}
+            multiple={type === "time_slot"}
+          />
           <SelectedDays dates={selectedDates} />
         </Field>
       )}
 
       <Field label="Время начала" hint="Без времени действие попадёт в «Дополнительно».">
         <TimeField value={startTime} onChange={setStartTime} />
+      </Field>
+
+      <Field label="Продолжительность">
+        <DurationPicker seconds={durationSeconds} onChange={setDurationSeconds} />
       </Field>
 
       <Field label="Напоминание">
@@ -366,10 +399,6 @@ export function ActionForm({
             </div>
           ) : null}
         </div>
-      </Field>
-
-      <Field label="Продолжительность">
-        <DurationPicker seconds={durationSeconds} onChange={setDurationSeconds} />
       </Field>
 
       <Accordion

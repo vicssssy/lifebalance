@@ -41,6 +41,7 @@ const actionSchema = z.object({
   why_important: nullableText(),
   helps_with: nullableText(),
   start_date: dateKey,
+  end_date: dateKey.nullable().default(null),
   reminder_enabled: z.boolean().default(false),
   reminder_time: z.string().regex(TIME_VALUE).nullable().default(null),
   archived_at: nullableText(100),
@@ -135,6 +136,7 @@ const actionPatchSchema = z
     why_important: nullableText().optional(),
     helps_with: nullableText().optional(),
     start_date: dateKey.optional(),
+    end_date: dateKey.nullable().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);
@@ -176,6 +178,7 @@ const actionDraftSchema = z.object({
   whyImportant: nullableText(),
   helpsWith: nullableText(),
   startDate: dateKey,
+  endDate: dateKey.nullable(),
   reminderEnabled: z.boolean(),
   reminderTime: z.string().regex(TIME_VALUE).nullable(),
   lifeAreaIds: z.array(id).max(3),
@@ -217,6 +220,7 @@ const actionConfigurationDraftSchema = z.object({
   durationSeconds: nullableNumber,
   whyImportant: nullableText(),
   startDate: dateKey,
+  endDate: dateKey.nullable(),
   reminderEnabled: z.boolean(),
   reminderTime: z.string().regex(TIME_VALUE).nullable(),
   lifeAreaIds: z.array(id).max(3),
@@ -427,7 +431,7 @@ function snapshotStatements(
     statements.push(
       db
         .prepare(
-          "INSERT INTO actions (id, workspace_id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO actions (id, workspace_id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, end_date, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           action.id,
@@ -440,6 +444,7 @@ function snapshotStatements(
           action.why_important,
           action.helps_with,
           action.start_date,
+          action.end_date,
           action.archived_at,
           action.created_at,
         ),
@@ -611,7 +616,7 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
       .bind(workspaceId),
     db
       .prepare(
-        "SELECT id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, reminder_enabled, reminder_time, archived_at, created_at FROM actions WHERE workspace_id = ? ORDER BY created_at DESC",
+        "SELECT id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, end_date, reminder_enabled, reminder_time, archived_at, created_at FROM actions WHERE workspace_id = ? ORDER BY created_at DESC",
       )
       .bind(workspaceId),
     db
@@ -866,6 +871,8 @@ async function mutate(
             }
           : undefined;
       if (draft.goalId) await assertOwned(db, "goals", "id", draft.goalId, workspaceId);
+      if (draft.endDate && draft.endDate < draft.startDate)
+        throw new WorkspaceRequestError("Дата завершения не может быть раньше даты начала.", 400);
       const action: Action = {
         id: crypto.randomUUID(),
         goal_id: draft.goalId ?? goal?.id ?? null,
@@ -876,6 +883,7 @@ async function mutate(
         why_important: draft.whyImportant,
         helps_with: draft.helpsWith,
         start_date: draft.startDate,
+        end_date: draft.endDate,
         reminder_enabled: draft.reminderEnabled,
         reminder_time: draft.reminderEnabled ? draft.reminderTime : null,
         archived_at: null,
@@ -901,7 +909,7 @@ async function mutate(
       statements.push(
         db
           .prepare(
-            "INSERT INTO actions (id, workspace_id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, reminder_enabled, reminder_time, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
+            "INSERT INTO actions (id, workspace_id, goal_id, name, type, description, duration_seconds, why_important, helps_with, start_date, end_date, reminder_enabled, reminder_time, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
           )
           .bind(
             action.id,
@@ -914,6 +922,7 @@ async function mutate(
             action.why_important,
             action.helps_with,
             action.start_date,
+            action.end_date,
             action.reminder_enabled ? 1 : 0,
             action.reminder_time,
             action.created_at,
@@ -986,6 +995,8 @@ async function mutate(
       await assertOwned(db, "actions", "id", operation.actionId, workspaceId);
       const draft = operation.draft;
       if (draft.goalId) await assertOwned(db, "goals", "id", draft.goalId, workspaceId);
+      if (draft.endDate && draft.endDate < draft.startDate)
+        throw new WorkspaceRequestError("Дата завершения не может быть раньше даты начала.", 400);
       const [ritualRows, attachmentRows, scheduleRows] = await Promise.all([
         db
           .prepare(
@@ -1029,7 +1040,7 @@ async function mutate(
       const statements: D1PreparedStatement[] = [
         db
           .prepare(
-            "UPDATE actions SET goal_id = ?, name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ?, reminder_enabled = ?, reminder_time = ? WHERE id = ? AND workspace_id = ?",
+            "UPDATE actions SET goal_id = ?, name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ?, end_date = ?, reminder_enabled = ?, reminder_time = ? WHERE id = ? AND workspace_id = ?",
           )
           .bind(
             draft.goalId,
@@ -1038,6 +1049,7 @@ async function mutate(
             draft.durationSeconds,
             draft.whyImportant,
             draft.startDate,
+            draft.endDate,
             draft.reminderEnabled ? 1 : 0,
             draft.reminderEnabled ? draft.reminderTime : null,
             operation.actionId,
@@ -1290,11 +1302,12 @@ async function mutate(
         operation.scheduleId,
         operation.fromDate,
       );
-      if (!validOccurrenceDate(operation.date) || operation.date < occurrence.action.start_date)
-        throw new WorkspaceRequestError(
-          "Дата переноса не может быть раньше даты начала действия.",
-          400,
-        );
+      if (
+        !validOccurrenceDate(operation.date) ||
+        operation.date < occurrence.action.start_date ||
+        (occurrence.action.end_date && operation.date > occurrence.action.end_date)
+      )
+        throw new WorkspaceRequestError("Дата переноса должна быть в периоде действия.", 400);
       // Guard the destination inside the write, including unmodified weekly occurrences.
       // The unique index is a second guard for simultaneous moves to the same date.
       const result = await db

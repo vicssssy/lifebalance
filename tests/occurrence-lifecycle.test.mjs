@@ -147,6 +147,7 @@ async function workspace(t) {
           whyImportant: null,
           helpsWith: null,
           startDate: "2026-09-01",
+          endDate: null,
           reminderEnabled: false,
           reminderTime: null,
           lifeAreaIds: ["body_health"],
@@ -296,6 +297,7 @@ for (const type of actionTypes) {
           durationSeconds: action.duration_seconds,
           whyImportant: action.why_important,
           startDate: action.start_date,
+          endDate: action.end_date,
           reminderEnabled: action.reminder_enabled,
           reminderTime: action.reminder_time,
           lifeAreaIds: ["body_health"],
@@ -315,6 +317,44 @@ for (const type of actionTypes) {
     }
   });
 }
+
+test("end date stops recurring occurrences and prevents moves beyond the active period", async (t) => {
+  const { read, mutate, create, at } = await workspace(t);
+  const { action, schedule } = await create("regular_action");
+  await mutate({
+    type: "updateActionConfiguration",
+    actionId: action.id,
+    draft: {
+      goalId: action.goal_id,
+      name: action.name,
+      description: action.description,
+      durationSeconds: action.duration_seconds,
+      whyImportant: action.why_important,
+      startDate: action.start_date,
+      endDate: "2026-09-09",
+      reminderEnabled: action.reminder_enabled,
+      reminderTime: action.reminder_time,
+      lifeAreaIds: ["body_health"],
+      ritualItems: [],
+      attachments: [],
+      schedules: [schedule],
+    },
+  });
+  const data = await read();
+  assert.equal(at(data, "2026-09-09", action.id).length, 1);
+  assert.equal(at(data, "2026-09-11", action.id).length, 0);
+  await mutate(
+    {
+      type: "rescheduleOccurrence",
+      scheduleId: schedule.id,
+      fromDate: "2026-09-09",
+      date: "2026-09-11",
+      startTime: null,
+      durationSeconds: null,
+    },
+    400,
+  );
+});
 
 test("ritual: partial progress, automatic completion, unchecking, pause and foreign-item rejection", async (t) => {
   const { read, mutate, create, at } = await workspace(t);

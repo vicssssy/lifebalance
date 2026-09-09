@@ -55,6 +55,7 @@ function CreateAction() {
       whyImportant: values.whyImportant,
       helpsWith: null,
       startDate: values.startDate,
+      endDate: values.endDate,
       reminderEnabled: values.reminderEnabled,
       reminderTime: values.reminderTime,
       lifeAreaIds: values.lifeAreaIds,

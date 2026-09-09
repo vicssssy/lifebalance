@@ -35,6 +35,7 @@ export interface CloudActionDraft {
   whyImportant: string | null;
   helpsWith: string | null;
   startDate: string;
+  endDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string | null;
   lifeAreaIds: string[];
@@ -59,6 +60,7 @@ export interface CloudActionConfigurationDraft {
   durationSeconds: number | null;
   whyImportant: string | null;
   startDate: string;
+  endDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string | null;
   lifeAreaIds: string[];
@@ -111,6 +113,7 @@ export type CloudWorkspaceOperation =
           | "why_important"
           | "helps_with"
           | "start_date"
+          | "end_date"
         >
       >;
     }

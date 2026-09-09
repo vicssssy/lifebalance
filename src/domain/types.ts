@@ -34,6 +34,8 @@ export interface Action {
   helps_with: string | null;
   /** Дата начала: раньше этой даты действие не появляется в приложении. */
   start_date: string;
+  /** Необязательная дата завершения: после неё действие не появляется в плане. */
+  end_date: string | null;
   reminder_enabled: boolean;
   reminder_time: string | null;
   archived_at: string | null;

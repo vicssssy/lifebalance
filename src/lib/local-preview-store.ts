@@ -32,7 +32,13 @@ interface LocalPreviewPlannerState {
 export type LocalPreviewActionPatch = Partial<
   Pick<
     Action,
-    "name" | "description" | "duration_seconds" | "why_important" | "helps_with" | "start_date"
+    | "name"
+    | "description"
+    | "duration_seconds"
+    | "why_important"
+    | "helps_with"
+    | "start_date"
+    | "end_date"
   >
 >;
 
@@ -60,6 +66,7 @@ export interface LocalPreviewActionDraft {
   whyImportant: string | null;
   helpsWith: string | null;
   startDate: string;
+  endDate: string | null;
   lifeAreaIds: string[];
   ritualItems: Array<{
     name: string;
@@ -140,6 +147,7 @@ function isAction(value: unknown): boolean {
     isNullableString(value["why_important"]) &&
     isNullableString(value["helps_with"]) &&
     typeof value["start_date"] === "string" &&
+    isNullableString(value["end_date"]) &&
     isNullableString(value["archived_at"]) &&
     typeof value["created_at"] === "string"
   );
@@ -511,6 +519,7 @@ export async function createLocalPreviewAction(
     why_important: draft.whyImportant,
     helps_with: draft.helpsWith,
     start_date: draft.startDate,
+    end_date: draft.endDate,
     reminder_enabled: false,
     reminder_time: null,
     archived_at: null,

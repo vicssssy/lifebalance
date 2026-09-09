@@ -224,12 +224,14 @@ export function DayPicker({
 export function CompactDatePicker({
   value,
   onChange,
+  emptyLabel = "Выбрать дату",
 }: {
-  value: string;
-  onChange: (value: string) => void;
+  value: string | null;
+  onChange: (value: string | null) => void;
+  emptyLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const date = fromDateKey(value);
+  const date = value ? fromDateKey(value) : null;
   const isToday = value === todayKey();
 
   return (
@@ -243,14 +245,30 @@ export function CompactDatePicker({
             <Calendar className="size-4" aria-hidden />
           </span>
           <span className="min-w-0 flex-1 text-base font-semibold">
-            {isToday ? `Сегодня, ${formatDayShort(date)}` : formatDayLong(date)}
+            {!date
+              ? emptyLabel
+              : isToday
+                ? `Сегодня, ${formatDayShort(date)}`
+                : formatDayLong(date)}
           </span>
-          <span className="text-sm font-medium text-primary">Изменить</span>
+          <span className="text-sm font-medium text-primary">{value ? "Изменить" : "Выбрать"}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[min(19rem,calc(100vw-2rem))] p-2">
+        {value ? (
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setOpen(false);
+            }}
+            className="focus-ring mb-2 min-h-10 rounded-[14px] px-3 text-sm font-medium text-muted-foreground hover:bg-white/70"
+          >
+            Без даты завершения
+          </button>
+        ) : null}
         <DayPicker
-          value={[value]}
+          value={value ? [value] : []}
           onChange={(next) => {
             const selected = next[0];
             if (selected) onChange(selected);
