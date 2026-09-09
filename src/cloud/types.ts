@@ -53,6 +53,7 @@ export interface CloudActionDraft {
 }
 
 export interface CloudActionConfigurationDraft {
+  goalId: string | null;
   name: string;
   description: string | null;
   durationSeconds: number | null;

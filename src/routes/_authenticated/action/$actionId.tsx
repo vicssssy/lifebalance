@@ -207,7 +207,9 @@ function ActionDetail() {
           <ActionForm
             type={action.type}
             areas={areas}
+            goals={source.goals}
             initial={{
+              goalId: action.goal_id,
               name: action.name,
               description: action.description,
               durationSeconds: action.duration_seconds,

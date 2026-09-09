@@ -211,6 +211,7 @@ const actionDraftSchema = z.object({
 });
 
 const actionConfigurationDraftSchema = z.object({
+  goalId: id.nullable(),
   name: z.string().min(1).max(500),
   description: nullableText(),
   durationSeconds: nullableNumber,
@@ -659,7 +660,10 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
     weekdays: parseWeekdays(String(weekdays_json ?? "[]")),
   })) as unknown as Schedule[];
   const source: PlannerRecords = {
-    actions: rows(2) as unknown as Action[],
+    actions: rows(2).map((action) => ({
+      ...action,
+      reminder_enabled: Boolean(action["reminder_enabled"]),
+    })) as unknown as Action[],
     schedules,
     occurrenceOverrides: (results[10]?.results ?? []) as OccurrenceOverride[],
     completions: rows(4) as unknown as Completion[],
@@ -981,6 +985,7 @@ async function mutate(
     case "updateActionConfiguration": {
       await assertOwned(db, "actions", "id", operation.actionId, workspaceId);
       const draft = operation.draft;
+      if (draft.goalId) await assertOwned(db, "goals", "id", draft.goalId, workspaceId);
       const [ritualRows, attachmentRows, scheduleRows] = await Promise.all([
         db
           .prepare(
@@ -1024,9 +1029,10 @@ async function mutate(
       const statements: D1PreparedStatement[] = [
         db
           .prepare(
-            "UPDATE actions SET name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ?, reminder_enabled = ?, reminder_time = ? WHERE id = ? AND workspace_id = ?",
+            "UPDATE actions SET goal_id = ?, name = ?, description = ?, duration_seconds = ?, why_important = ?, start_date = ?, reminder_enabled = ?, reminder_time = ? WHERE id = ? AND workspace_id = ?",
           )
           .bind(
+            draft.goalId,
             draft.name.trim(),
             draft.description,
             draft.durationSeconds,

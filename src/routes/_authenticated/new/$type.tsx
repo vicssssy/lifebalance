@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { createAction } from "@/data/actions";
 import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
-import { useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
+import { useGoals, useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
 import { ActionForm, type ActionFormValues } from "@/components/ActionForm";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PageContainer } from "@/components/ui/layout";
@@ -34,11 +34,12 @@ function CreateAction() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { data: areas = [] } = useLifeAreas();
+  const { data: goals = [] } = useGoals();
   const type = (TYPES.includes(rawType as ActionType) ? rawType : "task") as ActionType;
 
   const save = usePlannerMutation((values: ActionFormValues) =>
     createAction({
-      goalId: search.goalId ?? null,
+      goalId: values.goalId,
       newGoal:
         !search.goalId && search.resultText && search.lifeAreaId
           ? {
@@ -76,9 +77,11 @@ function CreateAction() {
         <ActionForm
           type={type}
           areas={areas}
+          goals={goals}
           initial={{
             // Goal text is context only; this field belongs to the Action.
             whyImportant: null,
+            goalId: search.goalId ?? null,
             lifeAreaIds: search.lifeAreaId ? [search.lifeAreaId] : [],
           }}
           submitting={save.isPending}

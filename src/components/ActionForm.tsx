@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Bell, Plus, Xmark as X } from "@/components/ui/icons";
 import { RECURRING_TYPES, type ActionType } from "@/domain/constants";
 import { todayKey } from "@/domain/schedule";
-import type { Attachment, LifeArea, RitualItem, Schedule } from "@/domain/types";
+import type { Attachment, Goal, LifeArea, RitualItem, Schedule } from "@/domain/types";
 import { DurationPicker } from "@/components/DurationPicker";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
 import {
@@ -23,6 +23,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { enableDeviceReminders } from "@/lib/reminders";
 
 export interface ActionFormRitualItem {
@@ -45,6 +52,7 @@ export interface ActionFormSchedule {
 }
 
 export interface ActionFormValues {
+  goalId: string | null;
   name: string;
   description: string | null;
   durationSeconds: number | null;
@@ -63,6 +71,7 @@ export interface ActionFormValues {
 }
 
 export interface ActionFormInitialValues {
+  goalId?: string | null;
   name?: string;
   description?: string | null;
   durationSeconds?: number | null;
@@ -90,6 +99,7 @@ const PLACEHOLDERS: Record<ActionType, { name: string; description: string }> = 
 export function ActionForm({
   type,
   areas,
+  goals,
   initial,
   submitting,
   submitLabel = "Сохранить",
@@ -97,6 +107,7 @@ export function ActionForm({
 }: {
   type: ActionType;
   areas: LifeArea[];
+  goals: Goal[];
   initial?: ActionFormInitialValues;
   submitting?: boolean;
   submitLabel?: string;
@@ -104,6 +115,7 @@ export function ActionForm({
 }) {
   const recurring = RECURRING_TYPES.includes(type);
   const initialSchedules = initial?.schedules ?? [];
+  const [goalId, setGoalId] = useState<string | null>(initial?.goalId ?? null);
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [whyImportant, setWhyImportant] = useState(initial?.whyImportant ?? "");
@@ -139,8 +151,12 @@ export function ActionForm({
   );
 
   const selectedDates = dates.length ? dates : recurring ? [] : [todayKey()];
+  const activeGoals = goals.filter((goal) => goal.status === "active");
   const hasAdditionalDetails =
-    lifeAreaIds.length > 0 || Boolean(whyImportant.trim()) || attachments.length > 0;
+    Boolean(goalId) ||
+    lifeAreaIds.length > 0 ||
+    Boolean(whyImportant.trim()) ||
+    attachments.length > 0;
   const additionalSummary = [
     lifeAreaIds.length ? `Сфер: ${lifeAreaIds.length}` : null,
     attachments.length ? `Материалов: ${attachments.length}` : null,
@@ -182,6 +198,7 @@ export function ActionForm({
         }));
 
     onSubmit({
+      goalId,
       name: name.trim(),
       description: description.trim() || null,
       durationSeconds,
@@ -379,6 +396,25 @@ export function ActionForm({
           <AccordionContent className="space-y-6 pt-2">
             <Field label="Сферы жизни" hint="Максимум три сферы.">
               <LifeAreaPicker areas={areas} value={lifeAreaIds} onChange={setLifeAreaIds} />
+            </Field>
+
+            <Field label="Цель">
+              <Select
+                value={goalId ?? "none"}
+                onValueChange={(value) => setGoalId(value === "none" ? null : value)}
+              >
+                <SelectTrigger aria-label="Выбрать цель">
+                  <SelectValue placeholder="Выбери цель" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Без цели</SelectItem>
+                  {activeGoals.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id}>
+                      {goal.result_text}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <Field label="Почему это важно для тебя">

@@ -147,6 +147,8 @@ async function workspace(t) {
           whyImportant: null,
           helpsWith: null,
           startDate: "2026-09-01",
+          reminderEnabled: false,
+          reminderTime: null,
           lifeAreaIds: ["body_health"],
           ritualItems:
             type === "ritual"
@@ -288,11 +290,14 @@ for (const type of actionTypes) {
         type: "updateActionConfiguration",
         actionId: action.id,
         draft: {
+          goalId: action.goal_id,
           name: action.name,
           description: action.description,
           durationSeconds: action.duration_seconds,
           whyImportant: action.why_important,
           startDate: action.start_date,
+          reminderEnabled: action.reminder_enabled,
+          reminderTime: action.reminder_time,
           lifeAreaIds: ["body_health"],
           ritualItems: [],
           attachments: [],
