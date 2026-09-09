@@ -347,7 +347,7 @@ export function ActionForm({
         </Field>
       )}
 
-      <Field label="Время начала" hint="Без времени действие попадёт в «Дополнительно».">
+      <Field label="Время начала">
         <TimeField value={startTime} onChange={setStartTime} />
       </Field>
 
