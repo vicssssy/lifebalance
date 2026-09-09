@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Check,
+  Calendar,
   NavArrowLeft as ChevronLeft,
   NavArrowRight as ChevronRight,
   Plus,
@@ -12,6 +13,7 @@ import {
   addDays,
   addMonths,
   formatDayShort,
+  formatDayLong,
   formatMonthTitle,
   fromDateKey,
   monthGrid,
@@ -22,6 +24,7 @@ import type { LifeArea } from "@/domain/types";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const weekdayPickerClassName = "content-surface flex gap-1.5 rounded-[24px] p-1.5";
 const weekdayBaseClassName =
@@ -214,6 +217,49 @@ export function DayPicker({
         })}
       </div>
     </div>
+  );
+}
+
+/** Компактный выбор одной даты: календарь открывается только по запросу. */
+export function CompactDatePicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const date = fromDateKey(value);
+  const isToday = value === todayKey();
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="content-surface focus-ring flex min-h-12 w-full items-center gap-3 rounded-[20px] px-4 text-left transition-colors hover:bg-white/90"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Calendar className="size-4" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1 text-base font-semibold">
+            {isToday ? `Сегодня, ${formatDayShort(date)}` : formatDayLong(date)}
+          </span>
+          <span className="text-sm font-medium text-primary">Изменить</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(19rem,calc(100vw-2rem))] p-2">
+        <DayPicker
+          value={[value]}
+          onChange={(next) => {
+            const selected = next[0];
+            if (selected) onChange(selected);
+            setOpen(false);
+          }}
+          multiple={false}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 

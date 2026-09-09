@@ -8,6 +8,7 @@ import { DurationPicker } from "@/components/DurationPicker";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
 import {
   AttachmentsField,
+  CompactDatePicker,
   DayPicker,
   LifeAreaPicker,
   SelectedDays,
@@ -295,13 +296,8 @@ export function ActionForm({
         </Field>
       ) : null}
 
-      <Field label="Дата начала" hint="До этой даты действие не появится в плане.">
-        <DayPicker
-          value={[startDate]}
-          onChange={(next) => setStartDate(next[0] ?? todayKey())}
-          multiple={false}
-        />
-        <SelectedDays dates={[startDate]} />
+      <Field label="Дата начала">
+        <CompactDatePicker value={startDate} onChange={setStartDate} />
       </Field>
 
       {recurring ? (
