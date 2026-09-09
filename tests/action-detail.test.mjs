@@ -150,6 +150,14 @@ for (const type of types) {
       "Материалы",
       "Расписание",
     ]);
+    const treeNodes = nodes(tree);
+    const controlsIndex = treeNodes.findIndex(
+      (n) => n.props?.["aria-label"] === "Управление выполнением",
+    );
+    const descriptionIndex = treeNodes.findIndex(
+      (n) => n.type === "Section" && n.props.title === "Описание",
+    );
+    assert.ok(controlsIndex > -1 && controlsIndex < descriptionIndex);
     assert.ok(text(tree).includes("Смысл действия"));
     for (const section of nodes(tree).filter((n) => n.type === "Section")) {
       const card = section.props.children;

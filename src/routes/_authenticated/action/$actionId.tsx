@@ -259,6 +259,77 @@ function ActionDetail() {
     return `${time}–${exactEnd}${days ? ` (+${days} дн.)` : ""}`;
   };
   const progress = items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined;
+  const completionControls =
+    schedule && actionIsActive ? (
+      <section
+        aria-label="Управление выполнением"
+        className="space-y-3 border-t border-border/60 pt-5"
+      >
+        <Button
+          size="lg"
+          variant={completed ? "occurrenceCompleted" : "primary"}
+          aria-label={completed ? "✓ Выполнено" : "Выполнено"}
+          loading={complete.isPending}
+          disabled={occurrencePending}
+          onClick={() =>
+            complete.mutate(undefined as never, {
+              onSuccess: () => toast.success("Выполнено"),
+              onError: mutationError,
+            })
+          }
+        >
+          <Check aria-hidden /> Выполнено
+        </Button>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            loading={skip.isPending}
+            disabled={occurrencePending}
+            onClick={() =>
+              skip.mutate(undefined as never, {
+                onSuccess: () => {
+                  toast.success("Пропущено");
+                  navigate({ to: "/today" });
+                },
+                onError: mutationError,
+              })
+            }
+          >
+            <SkipForward aria-hidden /> Пропустить
+          </Button>
+          <Button
+            variant="outline"
+            disabled={occurrencePending}
+            onClick={() => {
+              setMoveDate(date);
+              setMoveTime(occurrence?.startTime?.slice(0, 5) ?? "");
+              setMoveDuration(durationSeconds);
+              setMoveOpen(true);
+            }}
+          >
+            <Calendar aria-hidden /> Перенести
+          </Button>
+        </div>
+        {items.length && doneCount < items.length && !completed ? (
+          <Button
+            variant="ghost"
+            className="w-full"
+            disabled={occurrencePending}
+            onClick={() => {
+              pause.mutate(undefined as never, {
+                onSuccess: () => {
+                  toast.success(`Прогресс сохранён: ${doneCount} из ${items.length}`);
+                  navigate({ to: "/today" });
+                },
+                onError: mutationError,
+              });
+            }}
+          >
+            <Undo2 aria-hidden /> Вернусь позже
+          </Button>
+        ) : null}
+      </section>
+    ) : null;
 
   return (
     <div className="app-screen min-h-dvh bg-background pb-36">
@@ -333,6 +404,8 @@ function ActionDetail() {
               ) : null}
             </section>
           ) : null}
+
+          {completionControls}
 
           {description ? (
             <Section title="Описание">
@@ -470,77 +543,6 @@ function ActionDetail() {
                 })}
               </div>
             </Section>
-          ) : null}
-
-          {schedule && actionIsActive ? (
-            <section
-              aria-label="Управление выполнением"
-              className="space-y-3 border-t border-border/60 pt-5"
-            >
-              <Button
-                size="lg"
-                variant={completed ? "occurrenceCompleted" : "primary"}
-                aria-label={completed ? "✓ Выполнено" : "Выполнено"}
-                loading={complete.isPending}
-                disabled={occurrencePending}
-                onClick={() =>
-                  complete.mutate(undefined as never, {
-                    onSuccess: () => toast.success("Выполнено"),
-                    onError: mutationError,
-                  })
-                }
-              >
-                <Check aria-hidden /> Выполнено
-              </Button>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  loading={skip.isPending}
-                  disabled={occurrencePending}
-                  onClick={() =>
-                    skip.mutate(undefined as never, {
-                      onSuccess: () => {
-                        toast.success("Пропущено");
-                        navigate({ to: "/today" });
-                      },
-                      onError: mutationError,
-                    })
-                  }
-                >
-                  <SkipForward aria-hidden /> Пропустить
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={occurrencePending}
-                  onClick={() => {
-                    setMoveDate(date);
-                    setMoveTime(occurrence?.startTime?.slice(0, 5) ?? "");
-                    setMoveDuration(durationSeconds);
-                    setMoveOpen(true);
-                  }}
-                >
-                  <Calendar aria-hidden /> Перенести
-                </Button>
-              </div>
-              {items.length && doneCount < items.length && !completed ? (
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  disabled={occurrencePending}
-                  onClick={() => {
-                    pause.mutate(undefined as never, {
-                      onSuccess: () => {
-                        toast.success(`Прогресс сохранён: ${doneCount} из ${items.length}`);
-                        navigate({ to: "/today" });
-                      },
-                      onError: mutationError,
-                    });
-                  }}
-                >
-                  <Undo2 aria-hidden /> Вернусь позже
-                </Button>
-              ) : null}
-            </section>
           ) : null}
         </PageContainer>
       </main>
