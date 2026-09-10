@@ -80,6 +80,14 @@ function ActionDetail() {
           (item) => item.action.id === actionId && item.schedule.id === search.scheduleId,
         ) ?? null)
       : null;
+  // History may retain a recorded occurrence after its current schedule lifetime
+  // changes. Only the active-plan projection is allowed to expose mutations.
+  const actionableOccurrence =
+    validDate && search.scheduleId
+      ? (occurrencesForDate(source, date, "active-plan").find(
+          (item) => item.action.id === actionId && item.schedule.id === search.scheduleId,
+        ) ?? null)
+      : null;
   const action = source.actions.find((item) => item.id === actionId) ?? null;
   const schedules = source.schedules
     .filter((item) => item.action_id === actionId && item.status === "planned")
@@ -264,7 +272,7 @@ function ActionDetail() {
   };
   const progress = items.length ? `Пунктов выполнено: ${doneCount} из ${items.length}` : undefined;
   const completionControls =
-    schedule && actionIsActive ? (
+    schedule && actionableOccurrence ? (
       <section
         aria-label="Управление выполнением"
         className="space-y-3 border-t border-border/60 pt-5"
@@ -430,7 +438,7 @@ function ActionDetail() {
                     <div key={item.id} className="flex items-start gap-2 px-4">
                       <button
                         type="button"
-                        disabled={!schedule || !actionIsActive || occurrencePending}
+                        disabled={!actionableOccurrence || occurrencePending}
                         onClick={() =>
                           toggleItem.mutate(
                             { itemId: item.id, done: !done },
@@ -552,7 +560,7 @@ function ActionDetail() {
       </main>
 
       <PickerSheet
-        open={actionIsActive && moveOpen}
+        open={Boolean(actionableOccurrence) && moveOpen}
         onCancel={() => setMoveOpen(false)}
         submitLabel="Перенести"
         onSubmit={() => {

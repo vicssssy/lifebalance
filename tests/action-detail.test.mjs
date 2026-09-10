@@ -242,6 +242,31 @@ test("closed Goal preserves history display without active controls", () => {
   assert.ok(text(tree).includes("Выполнено"));
   assert.equal(completeButton(tree), undefined);
 });
+for (const status of ["completed", "skipped"]) {
+  test(`historical ${status} occurrence outside the active lifetime is read-only`, () => {
+    const source = fixture("ritual");
+    Object.assign(source.actions[0], { end_date: "2026-09-05" });
+    source.completions = [{ schedule_id: "s", occurrence_date: "2026-09-06", status }];
+    source.ritualItemCompletions = [
+      { ritual_item_id: "i", schedule_id: "s", occurrence_date: "2026-09-06" },
+    ];
+    const tree = harness(source)();
+    assert.ok(text(tree).includes(status === "completed" ? "Выполнено" : "Пропущено"));
+    assert.equal(completeButton(tree), undefined);
+    assert.ok(!nodes(tree).some((node) => node.props?.children === "Пропустить"));
+    assert.ok(!nodes(tree).some((node) => node.props?.children === "Перенести"));
+    const itemButton = nodes(tree).find((node) => node.props?.["aria-label"] === "Снять отметку");
+    assert.equal(itemButton?.props.disabled, true);
+  });
+}
+test("active occurrence keeps its completion controls", () => {
+  const tree = harness(fixture("task"))();
+  assert.ok(completeButton(tree));
+  assert.ok(
+    nodes(tree).some((node) => node.type === "Button" && text(node).includes("Пропустить")),
+  );
+  assert.ok(nodes(tree).some((node) => node.type === "Button" && text(node).includes("Перенести")));
+});
 test("approved completed color is one shared Button token", () => {
   const css = fs.readFileSync(path.join(root, "src/styles.css"), "utf8");
   const button = fs.readFileSync(path.join(root, "src/components/ui/button.tsx"), "utf8");

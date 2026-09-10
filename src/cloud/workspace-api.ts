@@ -786,9 +786,9 @@ function ritualCompletionStatement(
   return db
     .prepare(
       `
-    INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status)
+    INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status, completion_source)
     SELECT ?, ?, ?, ?, ?, CASE WHEN all_done THEN ? ELSE NULL END,
-      CASE WHEN all_done THEN 'completed' ELSE 'in_progress' END
+      CASE WHEN all_done THEN 'completed' ELSE 'in_progress' END, 'ritual_items'
     FROM (
       SELECT COUNT(*) > 0 AND COUNT(*) = SUM(EXISTS (
         SELECT 1 FROM ritual_item_completions c
@@ -798,8 +798,18 @@ function ritualCompletionStatement(
       FROM ritual_items i WHERE i.workspace_id = ? AND i.ritual_action_id = ? AND i.archived_at IS NULL
     ) WHERE TRUE
     ON CONFLICT (workspace_id, schedule_id, occurrence_date) DO UPDATE
-    SET completed_at = CASE WHEN completions.status = 'completed' AND excluded.status = 'completed'
-      THEN completions.completed_at ELSE excluded.completed_at END, status = excluded.status
+    -- Item progress can complete an in-progress ritual, but it never changes an
+    -- explicit terminal whole-occurrence decision. Only whole-occurrence controls
+    -- may reopen or change a manual completed/skipped state.
+    SET completed_at = CASE WHEN completions.completion_source = 'manual'
+      AND completions.status IN ('completed', 'skipped')
+      THEN completions.completed_at ELSE excluded.completed_at END,
+      status = CASE WHEN completions.completion_source = 'manual'
+        AND completions.status IN ('completed', 'skipped')
+        THEN completions.status ELSE excluded.status END,
+      completion_source = CASE WHEN completions.completion_source = 'manual'
+        AND completions.status IN ('completed', 'skipped')
+        THEN completions.completion_source ELSE excluded.completion_source END
   `,
     )
     .bind(
@@ -1429,7 +1439,7 @@ async function mutate(
         throw new WorkspaceRequestError("Расписание не принадлежит выбранному действию.", 400);
       await db
         .prepare(
-          "INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (workspace_id, schedule_id, occurrence_date) DO UPDATE SET action_id = excluded.action_id, completed_at = excluded.completed_at, status = excluded.status",
+          "INSERT INTO completions (id, workspace_id, action_id, schedule_id, occurrence_date, completed_at, status, completion_source) VALUES (?, ?, ?, ?, ?, ?, ?, 'manual') ON CONFLICT (workspace_id, schedule_id, occurrence_date) DO UPDATE SET action_id = excluded.action_id, completed_at = excluded.completed_at, status = excluded.status, completion_source = 'manual'",
         )
         .bind(
           crypto.randomUUID(),

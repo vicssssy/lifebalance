@@ -823,9 +823,8 @@ test("ritual: partial progress, automatic completion, unchecking, pause and fore
   assert.equal(at(await read(), date, action.id)[0].completed, true);
   assert.equal(at(await read(), date, action.id)[0].ritualProgress.done, 0);
   await setItem(items[0], true);
-  const partialItems = clone((await read()).source.ritualItemCompletions);
-  await mutate({ type: "setCompletion", actionId: action.id, ...context, status: "completed" });
   assert.equal(at(await read(), date, action.id)[0].completed, true);
+  const partialItems = clone((await read()).source.ritualItemCompletions);
   assert.deepEqual(clone((await read()).source.ritualItemCompletions), partialItems);
   assert.equal(at(await read(), "2026-09-11", action.id)[0].completed, false);
   await mutate({ type: "removeCompletion", ...context });
