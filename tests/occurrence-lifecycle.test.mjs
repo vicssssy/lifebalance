@@ -216,6 +216,25 @@ function newActionDraft({
   };
 }
 
+function recurringConfiguration(action, schedule, changes = {}) {
+  return {
+    goalId: action.goal_id,
+    name: action.name,
+    description: action.description,
+    durationSeconds: action.duration_seconds,
+    whyImportant: action.why_important,
+    startDate: action.start_date,
+    endDate: action.end_date,
+    reminderEnabled: action.reminder_enabled,
+    reminderTime: action.reminder_time,
+    lifeAreaId: "body_health",
+    ritualItems: [],
+    attachments: [],
+    schedules: [schedule],
+    ...changes,
+  };
+}
+
 for (const type of actionTypes) {
   test(`${type}: completion, skip, move and reopen affect one occurrence only`, async (t) => {
     const { read, mutate, create, at } = await workspace(t);
@@ -383,6 +402,107 @@ test("end date stops recurring occurrences and prevents moves beyond the active 
     },
     400,
   );
+});
+
+test("editing a recurring schedule replaces weekdays and start date without losing completion history", async (t) => {
+  const { read, mutate, create, at } = await workspace(t);
+  const { action, schedule } = await create("regular_action");
+  await mutate({
+    type: "setCompletion",
+    actionId: action.id,
+    scheduleId: schedule.id,
+    date,
+    status: "completed",
+  });
+
+  await mutate({
+    type: "updateActionConfiguration",
+    actionId: action.id,
+    draft: recurringConfiguration(
+      action,
+      { ...schedule, weekdays: [2] },
+      { startDate: "2026-09-10" },
+    ),
+  });
+
+  const data = await read();
+  const schedules = data.source.schedules.filter((item) => item.action_id === action.id);
+  assert.equal(schedules.length, 1);
+  assert.equal(schedules[0].id, schedule.id);
+  assert.deepEqual(clone(schedules[0].weekdays), [2]);
+  assert.equal(data.source.actions.find((item) => item.id === action.id).id, action.id);
+  assert.equal(
+    occurrencesForDate({ ...data.source, goals: data.goals }, date, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    false,
+  );
+  assert.equal(at(data, date, action.id)[0].completed, true);
+  assert.equal(
+    occurrencesForDate({ ...data.source, goals: data.goals }, "2026-09-15", "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    true,
+  );
+});
+
+test("editing a recurring end date hides future occurrences but retains completed history", async (t) => {
+  const { read, mutate, create, at } = await workspace(t);
+  const { action, schedule } = await create("regular_action");
+  await mutate({
+    type: "setCompletion",
+    actionId: action.id,
+    scheduleId: schedule.id,
+    date,
+    status: "completed",
+  });
+  await mutate({
+    type: "updateActionConfiguration",
+    actionId: action.id,
+    draft: recurringConfiguration(action, schedule, { endDate: date }),
+  });
+
+  const data = await read();
+  assert.equal(at(data, date, action.id)[0].completed, true);
+  assert.equal(
+    occurrencesForDate({ ...data.source, goals: data.goals }, "2026-09-11", "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    false,
+  );
+});
+
+test("editing a recurring schedule preserves one valid moved occurrence", async (t) => {
+  const { read, mutate, create, at } = await workspace(t);
+  const { action, schedule } = await create("regular_action");
+  await mutate({
+    type: "rescheduleOccurrence",
+    scheduleId: schedule.id,
+    fromDate: "2026-09-11",
+    date: "2026-09-12",
+    startTime: "09:30",
+    durationSeconds: 1800,
+  });
+  await mutate({
+    type: "updateActionConfiguration",
+    actionId: action.id,
+    draft: recurringConfiguration(
+      action,
+      { ...schedule, weekdays: [2] },
+      { startDate: "2026-09-10" },
+    ),
+  });
+
+  const data = await read();
+  const moved = at(data, "2026-09-12", action.id);
+  assert.equal(moved.length, 1);
+  assert.equal(moved[0].originalDate, "2026-09-11");
+  assert.equal(moved[0].startTime, "09:30");
+  assert.equal(
+    data.source.occurrenceOverrides.filter((item) => item.schedule_id === schedule.id).length,
+    1,
+  );
+  assert.equal(at(data, "2026-09-11", action.id).length, 0);
 });
 
 test("action configuration replaces its life area and keeps the selected goal consistent", async (t) => {

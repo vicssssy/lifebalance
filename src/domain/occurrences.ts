@@ -61,26 +61,35 @@ export function occurrencesForDate(
       (item) => item.schedule_id === schedule.id,
     );
     const override = overrides.find((item) => item.target_date === dateKey);
-    if (
-      !override &&
-      ((schedule.repeat_type === "once" && overrides.length > 0) ||
-        overrides.some((item) => item.original_date === dateKey) ||
-        !scheduleHitsDate(schedule, dateKey))
-    )
-      continue;
+    // A moved occurrence has one canonical display date: its target. Never show a
+    // second copy at the original date, including in history.
+    if (!override && overrides.some((item) => item.original_date === dateKey)) continue;
     const originalDate = override?.original_date ?? dateKey;
     const action = actionById.get(schedule.action_id);
     if (!action) continue;
+    const completion = source.completions.find(
+      (item) => item.schedule_id === schedule.id && item.occurrence_date === originalDate,
+    );
+    const terminalHistory =
+      view === "history" &&
+      (completion?.status === "completed" || completion?.status === "skipped");
+
+    // Editing a schedule changes the active plan, but must not erase a recorded
+    // completion from Calendar or Reflection. Active-plan never takes this path.
+    if (
+      !override &&
+      ((schedule.repeat_type === "once" && overrides.length > 0) ||
+        !scheduleHitsDate(schedule, dateKey)) &&
+      !terminalHistory
+    )
+      continue;
     // Действие появляется только в заданный период, включая обе его границы.
     if (
       (action.start_date && dateKey < action.start_date) ||
       (action.end_date && dateKey > action.end_date)
-    )
-      continue;
-
-    const completion = source.completions.find(
-      (item) => item.schedule_id === schedule.id && item.occurrence_date === originalDate,
-    );
+    ) {
+      if (!terminalHistory) continue;
+    }
 
     // Закрытая Goal сразу выключает действие из активного плана. Исторический режим
     // сохраняет прошлые появления, а в день закрытия — только уже зафиксированный факт.
@@ -90,8 +99,6 @@ export function occurrencesForDate(
     if (!actionActive) {
       const closedOn =
         goal?.closed_on ?? goal?.completed_at?.slice(0, 10) ?? goal?.archived_at?.slice(0, 10);
-      const terminalHistory =
-        completion?.status === "completed" || completion?.status === "skipped";
       if (
         view === "active-plan" ||
         !closedOn ||
