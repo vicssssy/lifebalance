@@ -67,7 +67,7 @@ export interface LocalPreviewActionDraft {
   helpsWith: string | null;
   startDate: string;
   endDate: string | null;
-  lifeAreaIds: string[];
+  lifeAreaId: string;
   ritualItems: Array<{
     name: string;
     description: string | null;
@@ -494,6 +494,16 @@ export async function createLocalPreviewAction(
   seedDate: string,
   draft: LocalPreviewActionDraft,
 ): Promise<{ action: Action; goal?: Goal }> {
+  const state = loadState(seedDate);
+  const selectedGoal = draft.goalId
+    ? (state.goals.find((goal) => goal.id === draft.goalId) ?? null)
+    : null;
+  if (draft.goalId && (!selectedGoal || selectedGoal.life_area_id !== draft.lifeAreaId)) {
+    throw new Error("Цель должна принадлежать выбранной сфере жизни.");
+  }
+  if (draft.newGoal && draft.newGoal.lifeAreaId !== draft.lifeAreaId) {
+    throw new Error("Новая цель должна принадлежать выбранной сфере жизни.");
+  }
   const createdAt = new Date().toISOString();
   const newGoal =
     !draft.goalId && draft.newGoal?.resultText.trim()
@@ -551,10 +561,12 @@ export async function createLocalPreviewAction(
       url: attachment.url.trim(),
       title: attachment.title?.trim() || null,
     }));
-  const actionLifeAreas = draft.lifeAreaIds.slice(0, 3).map((lifeAreaId) => ({
-    action_id: action.id,
-    life_area_id: lifeAreaId,
-  }));
+  const actionLifeAreas = [
+    {
+      action_id: action.id,
+      life_area_id: draft.lifeAreaId,
+    },
+  ];
 
   updateState(seedDate, (state) => ({
     ...state,

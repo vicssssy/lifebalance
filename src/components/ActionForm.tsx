@@ -62,7 +62,7 @@ export interface ActionFormValues {
   endDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string | null;
-  lifeAreaIds: string[];
+  lifeAreaId: string;
   ritualItems: Array<{
     id?: string;
     name: string;
@@ -82,7 +82,7 @@ export interface ActionFormInitialValues {
   endDate?: string | null;
   reminderEnabled?: boolean;
   reminderTime?: string | null;
-  lifeAreaIds?: string[];
+  lifeAreaId?: string | null;
   ritualItems?: RitualItem[];
   attachments?: Attachment[];
   schedules?: Schedule[];
@@ -140,7 +140,7 @@ export function ActionForm({
       ? []
       : (initialSchedules.map((schedule) => schedule.scheduled_date).filter(Boolean) as string[]),
   );
-  const [lifeAreaIds, setLifeAreaIds] = useState<string[]>(initial?.lifeAreaIds ?? []);
+  const [lifeAreaId, setLifeAreaId] = useState<string | null>(initial?.lifeAreaId ?? null);
   const [attachments, setAttachments] = useState<ActionFormAttachment[]>(
     initial?.attachments?.map((item) => ({ ...item })) ?? [],
   );
@@ -155,21 +155,25 @@ export function ActionForm({
   );
 
   const selectedDates = dates.length ? dates : recurring ? [] : [todayKey()];
-  const activeGoals = goals.filter((goal) => goal.status === "active");
+  const activeGoals = goals.filter(
+    (goal) => goal.status === "active" && goal.life_area_id === lifeAreaId,
+  );
+  const selectedArea = areas.find((area) => area.id === lifeAreaId) ?? null;
   const invalidDateRange = Boolean(endDate && endDate < startDate);
   const hasAdditionalDetails =
     Boolean(goalId) ||
-    lifeAreaIds.length > 0 ||
+    Boolean(lifeAreaId) ||
     Boolean(whyImportant.trim()) ||
     attachments.length > 0;
   const additionalSummary = [
-    lifeAreaIds.length ? `Сфер: ${lifeAreaIds.length}` : null,
+    selectedArea ? `Сфера: ${selectedArea.name}` : null,
     attachments.length ? `Материалов: ${attachments.length}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
   const canSave =
     Boolean(name.trim()) &&
+    Boolean(lifeAreaId) &&
     Boolean(startDate) &&
     !invalidDateRange &&
     (recurring ? weekdays.length > 0 : selectedDates.length > 0) &&
@@ -213,7 +217,7 @@ export function ActionForm({
       endDate: recurring ? endDate : null,
       reminderEnabled,
       reminderTime: reminderEnabled ? (startTime ?? reminderTime) : null,
-      lifeAreaIds,
+      lifeAreaId: lifeAreaId!,
       ritualItems:
         type === "ritual"
           ? items
@@ -419,14 +423,32 @@ export function ActionForm({
             </span>
           </AccordionTrigger>
           <AccordionContent className="space-y-6 pt-2">
-            <Field label="Сферы жизни" hint="Максимум три сферы.">
-              <LifeAreaPicker areas={areas} value={lifeAreaIds} onChange={setLifeAreaIds} />
+            <Field label="Сфера жизни">
+              <LifeAreaPicker
+                areas={areas}
+                value={lifeAreaId}
+                onChange={(nextLifeAreaId) => {
+                  setLifeAreaId(nextLifeAreaId);
+                  const selectedGoal = goals.find((goal) => goal.id === goalId);
+                  if (selectedGoal && selectedGoal.life_area_id !== nextLifeAreaId) {
+                    setGoalId(null);
+                  }
+                }}
+              />
             </Field>
 
             <Field label="Цель">
               <Select
                 value={goalId ?? "none"}
-                onValueChange={(value) => setGoalId(value === "none" ? null : value)}
+                onValueChange={(value) => {
+                  if (value === "none") {
+                    setGoalId(null);
+                    return;
+                  }
+                  const selectedGoal = goals.find((goal) => goal.id === value);
+                  setGoalId(value);
+                  if (selectedGoal) setLifeAreaId(selectedGoal.life_area_id);
+                }}
               >
                 <SelectTrigger aria-label="Выбрать цель">
                   <SelectValue placeholder="Выбери цель" />
@@ -464,7 +486,9 @@ export function ActionForm({
             ? undefined
             : reminderEnabled && !startTime && !reminderTime
               ? "Выбери время напоминания"
-              : "Заполни название и выбери, когда это делать"
+              : !lifeAreaId
+                ? "Выбери сферу жизни"
+                : "Заполни название и выбери, когда это делать"
         }
       >
         <PrimaryButton

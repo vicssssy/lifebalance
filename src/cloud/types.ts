@@ -38,7 +38,7 @@ export interface CloudActionDraft {
   endDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string | null;
-  lifeAreaIds: string[];
+  lifeAreaId: string;
   ritualItems: Array<{
     name: string;
     description: string | null;
@@ -63,7 +63,7 @@ export interface CloudActionConfigurationDraft {
   endDate: string | null;
   reminderEnabled: boolean;
   reminderTime: string | null;
-  lifeAreaIds: string[];
+  lifeAreaId: string;
   ritualItems: Array<{
     id?: string;
     name: string;

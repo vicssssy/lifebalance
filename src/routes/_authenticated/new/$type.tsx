@@ -41,7 +41,10 @@ function CreateAction() {
     createAction({
       goalId: values.goalId,
       newGoal:
-        !search.goalId && search.resultText && search.lifeAreaId
+        !search.goalId &&
+        search.resultText &&
+        search.lifeAreaId &&
+        values.lifeAreaId === search.lifeAreaId
           ? {
               lifeAreaId: search.lifeAreaId,
               resultText: search.resultText,
@@ -58,7 +61,7 @@ function CreateAction() {
       endDate: values.endDate,
       reminderEnabled: values.reminderEnabled,
       reminderTime: values.reminderTime,
-      lifeAreaIds: values.lifeAreaIds,
+      lifeAreaId: values.lifeAreaId,
       ritualItems: values.ritualItems,
       attachments: values.attachments,
       schedules: values.schedules,
@@ -83,7 +86,7 @@ function CreateAction() {
             // Goal text is context only; this field belongs to the Action.
             whyImportant: null,
             goalId: search.goalId ?? null,
-            lifeAreaIds: search.lifeAreaId ? [search.lifeAreaId] : [],
+            lifeAreaId: search.lifeAreaId || null,
           }}
           submitting={save.isPending}
           onSubmit={(values) =>

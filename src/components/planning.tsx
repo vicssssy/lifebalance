@@ -21,7 +21,6 @@ import {
   todayKey,
 } from "@/domain/schedule";
 import type { LifeArea } from "@/domain/types";
-import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -320,43 +319,36 @@ export function TimeField({
   );
 }
 
-/** Сферы жизни: первая приходит из начального выбора, максимум 3. */
+/** Одна сфера жизни для действия. */
 export function LifeAreaPicker({
   areas,
   value,
   onChange,
 }: {
   areas: LifeArea[];
-  value: string[];
-  onChange: (value: string[]) => void;
+  value: string | null;
+  onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const selectedArea = areas.find((area) => area.id === value) ?? null;
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        {value.map((id) => {
-          const area = areas.find((a) => a.id === id);
-          if (!area) return null;
-          return (
-            <span
-              key={id}
-              className="control-glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-primary"
-            >
-              <LifeAreaCategoryLink area={area} className="min-h-0" />
-              {value.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => onChange(value.filter((v) => v !== id))}
-                  aria-label={`Убрать ${area.name}`}
-                >
-                  <X className="size-3.5" />
-                </button>
-              ) : null}
+        {selectedArea ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="control-glass focus-ring flex min-h-12 w-full items-center gap-3 rounded-[20px] px-3 text-left transition-colors hover:bg-white/90"
+            aria-label={`Изменить сферу: ${selectedArea.name}`}
+          >
+            <LifeAreaIconFrame area={selectedArea} className="size-9 rounded-[14px]" />
+            <span className="min-w-0 flex-1 truncate text-base font-medium">
+              {selectedArea.name}
             </span>
-          );
-        })}
-        {value.length < 3 ? (
+            <span className="text-sm font-medium text-primary">Изменить</span>
+          </button>
+        ) : (
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -364,7 +356,7 @@ export function LifeAreaPicker({
           >
             <Plus className="size-3.5" /> Добавить сферу
           </button>
-        ) : null}
+        )}
       </div>
 
       {open && typeof document !== "undefined"
@@ -374,24 +366,29 @@ export function LifeAreaPicker({
                 <p className="pb-3 text-base font-semibold">Сфера жизни</p>
                 <div className="space-y-1.5">
                   {areas.map((area) => {
-                    const selected = value.includes(area.id);
+                    const selected = value === area.id;
                     return (
                       <button
                         key={area.id}
                         type="button"
                         onClick={() => {
-                          if (selected) onChange(value.filter((v) => v !== area.id));
-                          else if (value.length < 3) onChange([...value, area.id]);
+                          onChange(area.id);
                           setOpen(false);
                         }}
+                        aria-pressed={selected}
                         className="focus-ring flex w-full items-start justify-between gap-3 rounded-[20px] px-3 py-3 text-left transition-colors duration-200 hover:bg-white/55"
                       >
                         <span className="flex min-w-0 items-start gap-3">
                           <LifeAreaIconFrame area={area} className="mt-0.5" />
-                          <span className="min-w-0 pt-2 text-base">{area.name}</span>
+                          <span className="min-w-0">
+                            <span className="block pt-0.5 text-base font-medium">{area.name}</span>
+                            <span className="mt-1 block text-sm leading-snug text-muted-foreground">
+                              {area.question}
+                            </span>
+                          </span>
                         </span>
                         {selected ? (
-                          <Check className="mt-3.5 size-4 shrink-0 text-primary" />
+                          <Check className="mt-1.5 size-4 shrink-0 text-primary" />
                         ) : null}
                       </button>
                     );

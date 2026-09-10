@@ -106,10 +106,16 @@ function GoalsScreen() {
     : null;
 
   const selectedArea = areas.find((area) => area.id === search.area) ?? null;
+  const currentActions = source.actions.filter((action) => !action.archived_at);
+  const activeGoalIdsWithActions = new Set(
+    currentActions.flatMap((action) => (action.goal_id ? [action.goal_id] : [])),
+  );
 
   const visible = displayGoals.filter(
     (goal) =>
-      (showArchive ? goal.status !== "active" : goal.status === "active") &&
+      (showArchive
+        ? goal.status !== "active"
+        : goal.status === "active" && activeGoalIdsWithActions.has(goal.id)) &&
       (!selectedArea || goal.life_area_id === selectedArea.id),
   );
   const areasWithGoals = areas.filter((area) => visible.some((g) => g.life_area_id === area.id));
@@ -171,7 +177,9 @@ function GoalsScreen() {
                 {visible
                   .filter((g) => g.life_area_id === area.id)
                   .map((goal) => {
-                    const actions = source.actions.filter((a) => a.goal_id === goal.id);
+                    const actions = (showArchive ? source.actions : currentActions).filter(
+                      (action) => action.goal_id === goal.id,
+                    );
                     const card = (
                       <div
                         key={goal.id}

@@ -181,7 +181,7 @@ const actionDraftSchema = z.object({
   endDate: dateKey.nullable(),
   reminderEnabled: z.boolean(),
   reminderTime: z.string().regex(TIME_VALUE).nullable(),
-  lifeAreaIds: z.array(id).max(3),
+  lifeAreaId: id,
   ritualItems: z
     .array(
       z.object({
@@ -223,7 +223,7 @@ const actionConfigurationDraftSchema = z.object({
   endDate: dateKey.nullable(),
   reminderEnabled: z.boolean(),
   reminderTime: z.string().regex(TIME_VALUE).nullable(),
-  lifeAreaIds: z.array(id).max(3),
+  lifeAreaId: id,
   ritualItems: z
     .array(
       z.object({
@@ -640,7 +640,9 @@ async function readWorkspace(db: D1Database, workspaceId: string): Promise<Cloud
       )
       .bind(workspaceId),
     db
-      .prepare("SELECT action_id, life_area_id FROM action_life_areas WHERE workspace_id = ?")
+      .prepare(
+        "SELECT action_id, life_area_id FROM action_life_areas WHERE workspace_id = ? ORDER BY action_id, life_area_id",
+      )
       .bind(workspaceId),
     db
       .prepare(
@@ -698,6 +700,20 @@ async function assertOwned(
     .first();
   if (!row)
     throw new WorkspaceRequestError("Запись не найдена в текущем рабочем пространстве.", 404);
+}
+
+async function ownedGoalLifeArea(
+  db: D1Database,
+  goalId: string,
+  workspaceId: string,
+): Promise<string> {
+  const goal = await db
+    .prepare("SELECT life_area_id FROM goals WHERE id = ? AND workspace_id = ?")
+    .bind(goalId, workspaceId)
+    .first<{ life_area_id: string }>();
+  if (!goal)
+    throw new WorkspaceRequestError("Цель не найдена в текущем рабочем пространстве.", 404);
+  return goal.life_area_id;
 }
 
 function validOccurrenceDate(value: string): boolean {
@@ -870,7 +886,16 @@ async function mutate(
               closed_on: null,
             }
           : undefined;
-      if (draft.goalId) await assertOwned(db, "goals", "id", draft.goalId, workspaceId);
+      if (draft.goalId) {
+        const goalLifeAreaId = await ownedGoalLifeArea(db, draft.goalId, workspaceId);
+        if (goalLifeAreaId !== draft.lifeAreaId)
+          throw new WorkspaceRequestError("Цель должна принадлежать выбранной сфере жизни.", 400);
+      }
+      if (draft.newGoal && draft.newGoal.lifeAreaId !== draft.lifeAreaId)
+        throw new WorkspaceRequestError(
+          "Новая цель должна принадлежать выбранной сфере жизни.",
+          400,
+        );
       if (draft.endDate && draft.endDate < draft.startDate)
         throw new WorkspaceRequestError("Дата завершения не может быть раньше даты начала.", 400);
       const action: Action = {
@@ -928,15 +953,13 @@ async function mutate(
             action.created_at,
           ),
       );
-      for (const lifeAreaId of [...new Set(draft.lifeAreaIds)].slice(0, 3)) {
-        statements.push(
-          db
-            .prepare(
-              "INSERT INTO action_life_areas (workspace_id, action_id, life_area_id) VALUES (?, ?, ?)",
-            )
-            .bind(workspaceId, action.id, lifeAreaId),
-        );
-      }
+      statements.push(
+        db
+          .prepare(
+            "INSERT INTO action_life_areas (workspace_id, action_id, life_area_id) VALUES (?, ?, ?)",
+          )
+          .bind(workspaceId, action.id, draft.lifeAreaId),
+      );
       draft.ritualItems.forEach((item, index) => {
         statements.push(
           db
@@ -994,7 +1017,11 @@ async function mutate(
     case "updateActionConfiguration": {
       await assertOwned(db, "actions", "id", operation.actionId, workspaceId);
       const draft = operation.draft;
-      if (draft.goalId) await assertOwned(db, "goals", "id", draft.goalId, workspaceId);
+      if (draft.goalId) {
+        const goalLifeAreaId = await ownedGoalLifeArea(db, draft.goalId, workspaceId);
+        if (goalLifeAreaId !== draft.lifeAreaId)
+          throw new WorkspaceRequestError("Цель должна принадлежать выбранной сфере жизни.", 400);
+      }
       if (draft.endDate && draft.endDate < draft.startDate)
         throw new WorkspaceRequestError("Дата завершения не может быть раньше даты начала.", 400);
       const [ritualRows, attachmentRows, scheduleRows] = await Promise.all([
@@ -1060,15 +1087,13 @@ async function mutate(
           .bind(workspaceId, operation.actionId),
       ];
 
-      for (const lifeAreaId of [...new Set(draft.lifeAreaIds)].slice(0, 3)) {
-        statements.push(
-          db
-            .prepare(
-              "INSERT INTO action_life_areas (workspace_id, action_id, life_area_id) VALUES (?, ?, ?)",
-            )
-            .bind(workspaceId, operation.actionId, lifeAreaId),
-        );
-      }
+      statements.push(
+        db
+          .prepare(
+            "INSERT INTO action_life_areas (workspace_id, action_id, life_area_id) VALUES (?, ?, ?)",
+          )
+          .bind(workspaceId, operation.actionId, draft.lifeAreaId),
+      );
 
       draft.ritualItems.forEach((item, index) => {
         if (item.id) {

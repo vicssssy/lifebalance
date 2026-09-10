@@ -150,7 +150,7 @@ async function workspace(t) {
           endDate: null,
           reminderEnabled: false,
           reminderTime: null,
-          lifeAreaIds: ["body_health"],
+          lifeAreaId: "body_health",
           ritualItems:
             type === "ritual"
               ? [
@@ -300,7 +300,7 @@ for (const type of actionTypes) {
           endDate: action.end_date,
           reminderEnabled: action.reminder_enabled,
           reminderTime: action.reminder_time,
-          lifeAreaIds: ["body_health"],
+          lifeAreaId: "body_health",
           ritualItems: [],
           attachments: [],
           schedules: [{ ...originalSchedule, scheduled_date: "2026-09-14", start_time: "11:00" }],
@@ -334,7 +334,7 @@ test("end date stops recurring occurrences and prevents moves beyond the active 
       endDate: "2026-09-09",
       reminderEnabled: action.reminder_enabled,
       reminderTime: action.reminder_time,
-      lifeAreaIds: ["body_health"],
+      lifeAreaId: "body_health",
       ritualItems: [],
       attachments: [],
       schedules: [schedule],
@@ -354,6 +354,73 @@ test("end date stops recurring occurrences and prevents moves beyond the active 
     },
     400,
   );
+});
+
+test("action configuration replaces its life area and keeps the selected goal consistent", async (t) => {
+  const { read, mutate, create, goal } = await workspace(t);
+  const { action, schedule } = await create("task", false);
+  const { action: remainingAction } = await create("regular_action", true, goal.id);
+  const otherGoal = (
+    await mutate({
+      type: "createGoal",
+      lifeAreaId: "personal_growth",
+      resultText: "Другая цель",
+      whyImportant: null,
+    })
+  ).data;
+  const draft = (goalId, lifeAreaId) => ({
+    goalId,
+    name: action.name,
+    description: action.description,
+    durationSeconds: action.duration_seconds,
+    whyImportant: action.why_important,
+    startDate: action.start_date,
+    endDate: action.end_date,
+    reminderEnabled: action.reminder_enabled,
+    reminderTime: action.reminder_time,
+    lifeAreaId,
+    ritualItems: [],
+    attachments: [],
+    schedules: [schedule],
+  });
+
+  await mutate({
+    type: "updateActionConfiguration",
+    actionId: action.id,
+    draft: draft(null, "personal_growth"),
+  });
+  let data = await read();
+  assert.equal(data.source.actions.find((item) => item.id === action.id).goal_id, null);
+  assert.deepEqual(
+    clone(data.source.actionLifeAreas.filter((item) => item.action_id === action.id)),
+    [{ action_id: action.id, life_area_id: "personal_growth" }],
+  );
+  assert.ok(
+    data.source.actions.some((item) => item.id === remainingAction.id && item.goal_id === goal.id),
+  );
+
+  await mutate({
+    type: "updateActionConfiguration",
+    actionId: action.id,
+    draft: draft(otherGoal.id, "personal_growth"),
+  });
+  data = await read();
+  assert.equal(data.source.actions.find((item) => item.id === action.id).goal_id, otherGoal.id);
+  assert.deepEqual(
+    clone(data.source.actionLifeAreas.filter((item) => item.action_id === action.id)),
+    [{ action_id: action.id, life_area_id: "personal_growth" }],
+  );
+
+  await mutate(
+    {
+      type: "updateActionConfiguration",
+      actionId: action.id,
+      draft: draft(goal.id, "personal_growth"),
+    },
+    400,
+  );
+  data = await read();
+  assert.equal(data.source.actions.find((item) => item.id === action.id).goal_id, otherGoal.id);
 });
 
 test("ritual: partial progress, automatic completion, unchecking, pause and foreign-item rejection", async (t) => {

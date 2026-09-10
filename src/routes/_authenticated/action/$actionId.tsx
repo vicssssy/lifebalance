@@ -109,10 +109,11 @@ function ActionDetail() {
   const actionAreaIds = source.actionLifeAreas
     .filter((link) => link.action_id === actionId)
     .map((link) => link.life_area_id);
-  const actionAreas = actionAreaIds
-    .map((areaId) => areas.find((area) => area.id === areaId))
-    .filter((area): area is NonNullable<typeof area> => Boolean(area));
   const goal = source.goals.find((item) => item.id === action?.goal_id) ?? null;
+  // Legacy actions can retain several links. Editing preserves history until save,
+  // while the active UI uses the goal's area first and otherwise a stable first link.
+  const actionLifeAreaId = goal?.life_area_id ?? actionAreaIds[0] ?? null;
+  const actionAreas = actionLifeAreaId ? areas.filter((area) => area.id === actionLifeAreaId) : [];
   const actionIsActive = !action?.goal_id || goal?.status === "active";
   const completed = occurrence?.completed ?? false;
   const itemDone = (itemId: string) =>
@@ -218,7 +219,7 @@ function ActionDetail() {
               endDate: action.end_date,
               reminderEnabled: action.reminder_enabled,
               reminderTime: action.reminder_time,
-              lifeAreaIds: actionAreaIds,
+              lifeAreaId: actionLifeAreaId,
               ritualItems: items,
               attachments,
               schedules,
