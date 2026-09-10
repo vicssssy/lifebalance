@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveReflection } from "@/data/reflections";
 import { REFLECTION_QUESTIONS, type ReflectionField } from "@/domain/constants";
-import { factsForRange } from "@/domain/occurrences";
-import { addMonths, formatMonthTitle, monthStartKey, toDateKey } from "@/domain/schedule";
+import { reflectionFactsForMonth } from "@/domain/occurrences";
+import { addMonths, formatMonthTitle, monthStartKey, todayKey } from "@/domain/schedule";
 import { usePlannerMutation, usePlannerSource, useReflections } from "@/hooks/useAppData";
 import { AppScreen } from "@/components/AppScreen";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
@@ -41,11 +41,12 @@ function ReflectionScreen() {
   >({});
   const answers = answersByMonth[month] ?? {};
 
-  const facts = useMemo(() => {
-    const from = monthStartKey(monthDate);
-    const to = toDateKey(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0));
-    return factsForRange(source, from, to);
-  }, [source, monthDate]);
+  const today = todayKey();
+  const facts = useMemo(
+    () => reflectionFactsForMonth(source, month, today),
+    [source, month, today],
+  );
+  const isFutureMonth = month > today;
 
   const save = usePlannerMutation(() => {
     const nextAnswers = REFLECTION_QUESTIONS.reduce(
@@ -95,15 +96,25 @@ function ReflectionScreen() {
                   <span className="min-w-0 break-words text-base font-medium">
                     {fact.action.name}
                   </span>
-                  <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1.5 text-xs font-semibold tabular-nums text-primary">
-                    {fact.completed} из {fact.planned}
+                  <span
+                    className="shrink-0 rounded-2xl bg-secondary px-2.5 py-1.5 text-right text-xs font-semibold tabular-nums text-primary"
+                    aria-label={`Выполнено: ${fact.completed} из ${fact.planned}. Пропущено: ${fact.skipped}.`}
+                  >
+                    <span className="block">
+                      Выполнено: {fact.completed} из {fact.planned}
+                    </span>
+                    <span className="mt-0.5 block text-muted-foreground">
+                      Пропущено: {fact.skipped}
+                    </span>
                   </span>
                 </div>
               ))}
             </Card>
           ) : (
             <p className="content-surface rounded-[24px] px-4 py-4 text-sm text-muted-foreground">
-              В этом месяце не было запланированных действий.
+              {isFutureMonth
+                ? "Этот месяц ещё не начался — факты появятся, когда он начнётся."
+                : "В этом периоде ещё не было действий."}
             </p>
           )}
           <p className="mt-2 text-sm text-muted-foreground">

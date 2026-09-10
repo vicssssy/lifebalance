@@ -43,7 +43,9 @@ function load(file) {
   return exports;
 }
 const { handleWorkspaceApi } = load(path.join(root, "src/cloud/workspace-api.ts"));
-const { occurrencesForDate, factsForRange } = load(path.join(root, "src/domain/occurrences.ts"));
+const { occurrencesForDate, factsForRange, reflectionFactsForMonth } = load(
+  path.join(root, "src/domain/occurrences.ts"),
+);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const actionTypes = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 const date = "2026-09-09"; // Wednesday
@@ -235,6 +237,187 @@ function recurringConfiguration(action, schedule, changes = {}) {
   };
 }
 
+test("Reflection facts include lived current-month occurrences and their outcomes only", () => {
+  const action = {
+    id: "reflection-action",
+    goal_id: null,
+    name: "Действие для рефлексии",
+    type: "task",
+    description: null,
+    duration_seconds: null,
+    why_important: null,
+    helps_with: null,
+    start_date: "2026-09-01",
+    end_date: null,
+    reminder_enabled: false,
+    reminder_time: null,
+    archived_at: null,
+    created_at: "2026-09-01T08:00:00Z",
+  };
+  const source = {
+    actions: [action],
+    schedules: [
+      {
+        id: "reflection-schedule",
+        action_id: action.id,
+        repeat_type: "weekly",
+        scheduled_date: null,
+        weekdays: [1, 2, 3, 4, 5, 6, 7],
+        start_time: null,
+        duration_seconds: null,
+        status: "planned",
+      },
+    ],
+    occurrenceOverrides: [],
+    completions: [
+      ...["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"].map(
+        (occurrence_date) => ({
+          id: `completed-${occurrence_date}`,
+          action_id: action.id,
+          schedule_id: "reflection-schedule",
+          occurrence_date,
+          completed_at: "2026-09-08T08:00:00Z",
+          status: "completed",
+        }),
+      ),
+      ...["2026-09-06", "2026-09-07"].map((occurrence_date) => ({
+        id: `skipped-${occurrence_date}`,
+        action_id: action.id,
+        schedule_id: "reflection-schedule",
+        occurrence_date,
+        completed_at: "2026-09-08T08:00:00Z",
+        status: "skipped",
+      })),
+    ],
+    ritualItems: [],
+    ritualItemCompletions: [],
+    actionLifeAreas: [],
+    goals: [],
+  };
+
+  const [fact] = reflectionFactsForMonth(source, "2026-09-01", "2026-09-08");
+  assert.equal(fact.planned, 8);
+  assert.equal(fact.completed, 5);
+  assert.equal(fact.skipped, 2);
+  assert.equal(reflectionFactsForMonth(source, "2026-10-01", "2026-09-08").length, 0);
+});
+
+test("Reflection facts count a moved occurrence once on its target date and keep a ritual whole", () => {
+  const action = (id, type) => ({
+    id,
+    goal_id: null,
+    name: id,
+    type,
+    description: null,
+    duration_seconds: null,
+    why_important: null,
+    helps_with: null,
+    start_date: "2026-09-01",
+    end_date: null,
+    reminder_enabled: false,
+    reminder_time: null,
+    archived_at: null,
+    created_at: "2026-09-01T08:00:00Z",
+  });
+  const moved = action("moved", "task");
+  const ritual = action("ritual", "ritual");
+  const source = {
+    actions: [moved, ritual],
+    schedules: [
+      {
+        id: "moved-schedule",
+        action_id: moved.id,
+        repeat_type: "once",
+        scheduled_date: "2026-09-01",
+        weekdays: [],
+        start_time: null,
+        duration_seconds: null,
+        status: "planned",
+      },
+      {
+        id: "ritual-schedule",
+        action_id: ritual.id,
+        repeat_type: "once",
+        scheduled_date: "2026-09-03",
+        weekdays: [],
+        start_time: null,
+        duration_seconds: null,
+        status: "planned",
+      },
+    ],
+    occurrenceOverrides: [
+      {
+        schedule_id: "moved-schedule",
+        original_date: "2026-09-01",
+        target_date: "2026-09-03",
+        start_time: null,
+        duration_seconds: null,
+      },
+    ],
+    completions: [
+      {
+        id: "moved-completion",
+        action_id: moved.id,
+        schedule_id: "moved-schedule",
+        occurrence_date: "2026-09-01",
+        completed_at: "2026-09-03T08:00:00Z",
+        status: "completed",
+      },
+      {
+        id: "ritual-completion",
+        action_id: ritual.id,
+        schedule_id: "ritual-schedule",
+        occurrence_date: "2026-09-03",
+        completed_at: "2026-09-03T08:00:00Z",
+        status: "completed",
+      },
+    ],
+    ritualItems: [
+      {
+        id: "one",
+        ritual_action_id: ritual.id,
+        name: "Один",
+        description: null,
+        duration_seconds: null,
+        sort_order: 0,
+      },
+      {
+        id: "two",
+        ritual_action_id: ritual.id,
+        name: "Два",
+        description: null,
+        duration_seconds: null,
+        sort_order: 1,
+      },
+    ],
+    ritualItemCompletions: [
+      {
+        id: "one-done",
+        ritual_item_id: "one",
+        schedule_id: "ritual-schedule",
+        occurrence_date: "2026-09-03",
+      },
+      {
+        id: "two-done",
+        ritual_item_id: "two",
+        schedule_id: "ritual-schedule",
+        occurrence_date: "2026-09-03",
+      },
+    ],
+    actionLifeAreas: [],
+    goals: [],
+  };
+
+  const facts = reflectionFactsForMonth(source, "2026-09-01", "2026-09-03");
+  assert.deepEqual(
+    facts.map((fact) => [fact.action.id, fact.planned, fact.completed, fact.skipped]),
+    [
+      ["moved", 1, 1, 0],
+      ["ritual", 1, 1, 0],
+    ],
+  );
+});
+
 for (const type of actionTypes) {
   test(`${type}: completion, skip, move and reopen affect one occurrence only`, async (t) => {
     const { read, mutate, create, at } = await workspace(t);
@@ -414,6 +597,13 @@ test("editing a recurring schedule replaces weekdays and start date without losi
     date,
     status: "completed",
   });
+  await mutate({
+    type: "setCompletion",
+    actionId: action.id,
+    scheduleId: schedule.id,
+    date: "2026-09-07",
+    status: "skipped",
+  });
 
   await mutate({
     type: "updateActionConfiguration",
@@ -438,6 +628,11 @@ test("editing a recurring schedule replaces weekdays and start date without losi
     false,
   );
   assert.equal(at(data, date, action.id)[0].completed, true);
+  assert.equal(at(data, "2026-09-07", action.id)[0].skipped, true);
+  const facts = factsForRange({ ...data.source, goals: data.goals }, "2026-09-07", date).find(
+    (fact) => fact.action.id === action.id,
+  );
+  assert.deepEqual(clone([facts.planned, facts.completed, facts.skipped]), [2, 1, 1]);
   assert.equal(
     occurrencesForDate({ ...data.source, goals: data.goals }, "2026-09-15", "active-plan").some(
       (occurrence) => occurrence.action.id === action.id,

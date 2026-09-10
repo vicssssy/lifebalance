@@ -1,5 +1,5 @@
 import { DAY_PARTS, type DayPart } from "./constants";
-import { dayPartFor, fromDateKey, weeklyScheduleIncludesDate } from "./schedule";
+import { dayPartFor, fromDateKey, toDateKey, weeklyScheduleIncludesDate } from "./schedule";
 import type {
   Action,
   Completion,
@@ -183,22 +183,30 @@ export function groupByDayPart(occurrences: Occurrence[]): DaySection[] {
   })).filter((section) => section.items.length > 0);
 }
 
-/** Фактические данные для Рефлексии: запланировано / выполнено за период. */
+export interface ReflectionFact {
+  action: Action;
+  planned: number;
+  completed: number;
+  skipped: number;
+}
+
+/** Фактические данные для Рефлексии: запланировано / выполнено / пропущено за период. */
 export function factsForRange(
   source: OccurrenceSource,
   fromKey: string,
   toKey: string,
-): { action: Action; planned: number; completed: number }[] {
-  const counters = new Map<string, { planned: number; completed: number }>();
+): ReflectionFact[] {
+  const counters = new Map<string, Omit<ReflectionFact, "action">>();
   const from = fromDateKey(fromKey);
   const to = fromDateKey(toKey);
 
   for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
     const key = `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, "0")}-${`${d.getDate()}`.padStart(2, "0")}`;
     for (const occ of occurrencesForDate(source, key, "history")) {
-      const entry = counters.get(occ.action.id) ?? { planned: 0, completed: 0 };
+      const entry = counters.get(occ.action.id) ?? { planned: 0, completed: 0, skipped: 0 };
       entry.planned += 1;
       if (occ.completed) entry.completed += 1;
+      if (occ.skipped) entry.skipped += 1;
       counters.set(occ.action.id, entry);
     }
   }
@@ -206,4 +214,19 @@ export function factsForRange(
   return source.actions
     .filter((a) => counters.has(a.id))
     .map((action) => ({ action, ...counters.get(action.id)! }));
+}
+
+/**
+ * Facts for Reflection are limited to lived days. A future month has no facts,
+ * while the current month ends today rather than at the end of the month.
+ */
+export function reflectionFactsForMonth(
+  source: OccurrenceSource,
+  monthStart: string,
+  today: string,
+): ReflectionFact[] {
+  if (monthStart > today) return [];
+  const date = fromDateKey(monthStart);
+  const monthEnd = toDateKey(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+  return factsForRange(source, monthStart, monthEnd < today ? monthEnd : today);
 }
