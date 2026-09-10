@@ -23,6 +23,26 @@ export function isoWeekday(date: Date): number {
   return day === 0 ? 7 : day;
 }
 
+/** Совпадает ли дата с ISO-днями недели расписания. */
+export function weeklyScheduleIncludesDate(weekdays: number[], dateKey: string): boolean {
+  return weekdays.includes(isoWeekday(fromDateKey(dateKey)));
+}
+
+/** Первое появление weekly-расписания в заданном периоде, включая дату начала. */
+export function firstWeeklyOccurrenceDate(
+  startDate: string,
+  weekdays: number[],
+  endDate: string | null = null,
+): string | null {
+  if (!weekdays.length) return null;
+  for (let offset = 0; offset < 7; offset += 1) {
+    const candidate = toDateKey(addDays(fromDateKey(startDate), offset));
+    if (endDate && candidate > endDate) return null;
+    if (weeklyScheduleIncludesDate(weekdays, candidate)) return candidate;
+  }
+  return null;
+}
+
 /** "08:00:00" -> "08:00" */
 export function formatTime(time: string | null): string | null {
   if (!time) return null;

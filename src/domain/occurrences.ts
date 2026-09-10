@@ -1,5 +1,5 @@
 import { DAY_PARTS, type DayPart } from "./constants";
-import { dayPartFor, fromDateKey, isoWeekday } from "./schedule";
+import { dayPartFor, fromDateKey, weeklyScheduleIncludesDate } from "./schedule";
 import type {
   Action,
   Completion,
@@ -28,8 +28,7 @@ export interface OccurrenceSource extends PlannerRecords {
 function scheduleHitsDate(schedule: Schedule, dateKey: string): boolean {
   if (schedule.status !== "planned") return false;
   if (schedule.repeat_type === "once") return schedule.scheduled_date === dateKey;
-  const weekday = isoWeekday(fromDateKey(dateKey));
-  return schedule.weekdays.includes(weekday);
+  return weeklyScheduleIncludesDate(schedule.weekdays, dateKey);
 }
 
 export type OccurrenceView = "active-plan" | "history";

@@ -2,7 +2,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Bell, Plus, Xmark as X } from "@/components/ui/icons";
 import { RECURRING_TYPES, type ActionType } from "@/domain/constants";
-import { todayKey } from "@/domain/schedule";
+import {
+  firstWeeklyOccurrenceDate,
+  formatDayShort,
+  fromDateKey,
+  todayKey,
+} from "@/domain/schedule";
 import type { Attachment, Goal, LifeArea, RitualItem, Schedule } from "@/domain/types";
 import { DurationPicker } from "@/components/DurationPicker";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
@@ -159,6 +164,14 @@ export function ActionForm({
     (goal) => goal.status === "active" && goal.life_area_id === lifeAreaId,
   );
   const selectedArea = areas.find((area) => area.id === lifeAreaId) ?? null;
+  const firstWeeklyOccurrence = recurring
+    ? firstWeeklyOccurrenceDate(startDate, weekdays, endDate)
+    : null;
+  const firstWeeklyOccurrenceLabel = firstWeeklyOccurrence
+    ? firstWeeklyOccurrence === todayKey()
+      ? "сегодня"
+      : formatDayShort(fromDateKey(firstWeeklyOccurrence))
+    : null;
   const invalidDateRange = Boolean(endDate && endDate < startDate);
   const hasAdditionalDetails =
     Boolean(goalId) ||
@@ -328,6 +341,15 @@ export function ActionForm({
 
           <Field label="Дни недели" hint="Действие будет появляться в выбранные дни каждую неделю.">
             <WeekdayPicker value={weekdays} onChange={setWeekdays} />
+            {firstWeeklyOccurrenceLabel ? (
+              <p className="mt-2 text-sm leading-snug text-muted-foreground" aria-live="polite">
+                Первое выполнение: {firstWeeklyOccurrenceLabel}
+              </p>
+            ) : weekdays.length ? (
+              <p className="mt-2 text-sm leading-snug text-muted-foreground" aria-live="polite">
+                В выбранный период нет выполнения.
+              </p>
+            ) : null}
           </Field>
         </>
       ) : (

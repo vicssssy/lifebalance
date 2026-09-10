@@ -73,6 +73,7 @@ function loader(mocks = {}) {
 }
 const load = loader();
 const { occurrencesForDate, completionProgressForDate } = load("src/domain/occurrences.ts");
+const { firstWeeklyOccurrenceDate } = load("src/domain/schedule.ts");
 const { DayPicker } = load("src/components/planning.tsx");
 const { OccurrenceCard } = load("src/components/OccurrenceCard.tsx");
 const plain = (value) => JSON.parse(JSON.stringify(value));
@@ -111,6 +112,13 @@ function nodes(value) {
   if (Array.isArray(value)) return value.flatMap(nodes);
   return [value, ...nodes(value.props?.children)];
 }
+
+test("first weekly occurrence follows the same weekday and date-boundary rules as occurrences", () => {
+  assert.equal(firstWeeklyOccurrenceDate("2026-09-10", [2]), "2026-09-15");
+  assert.equal(firstWeeklyOccurrenceDate("2026-09-09", [3]), "2026-09-09");
+  assert.equal(firstWeeklyOccurrenceDate("2026-09-10", [2], "2026-09-12"), null);
+  assert.equal(firstWeeklyOccurrenceDate("2026-09-10", []), null);
+});
 
 test("calendar progress: no occurrences, zero, partial, full, skipped and ritual counted once", () => {
   const source = fixture();
