@@ -160,7 +160,19 @@ function goalHarness() {
         ],
       }),
       useLifeAreas: () => ({ data: [{ id: "health", name: "Тело и здоровье" }] }),
-      usePlannerSource: () => ({ source: { actions: [] } }),
+      usePlannerSource: () => ({
+        source: {
+          actions: [
+            {
+              id: "active-action",
+              goal_id: "active",
+              name: "Действие активной цели",
+              type: "task",
+              archived_at: null,
+            },
+          ],
+        },
+      }),
       usePlannerMutation: (fn) => ({
         isPending: false,
         mutate: async (input, options) => {

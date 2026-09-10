@@ -69,7 +69,7 @@ export async function deliverDueReminders(db: D1Database, env: ReminderEnv): Pro
     }
     const rows = await db
       .prepare(
-        "SELECT ps.id subscription_id, ps.workspace_id, ps.endpoint, ps.p256dh, ps.auth, ps.timezone, a.id action_id, a.name action_name, a.start_date, a.end_date, a.reminder_time, s.id schedule_id, s.repeat_type, s.scheduled_date, s.weekdays_json, o.original_date, o.target_date FROM push_subscriptions ps JOIN actions a ON a.workspace_id = ps.workspace_id JOIN schedules s ON s.workspace_id = a.workspace_id AND s.action_id = a.id LEFT JOIN occurrence_overrides o ON o.workspace_id = s.workspace_id AND o.schedule_id = s.id AND (o.original_date = ? OR o.target_date = ?) WHERE ps.timezone = ? AND a.reminder_enabled = 1 AND a.reminder_time IS NOT NULL AND a.archived_at IS NULL AND s.status = 'planned'",
+        "SELECT ps.id subscription_id, ps.workspace_id, ps.endpoint, ps.p256dh, ps.auth, ps.timezone, a.id action_id, a.name action_name, a.start_date, a.end_date, a.reminder_time, s.id schedule_id, s.repeat_type, s.scheduled_date, s.weekdays_json, o.original_date, o.target_date FROM push_subscriptions ps JOIN actions a ON a.workspace_id = ps.workspace_id LEFT JOIN goals g ON g.workspace_id = a.workspace_id AND g.id = a.goal_id JOIN schedules s ON s.workspace_id = a.workspace_id AND s.action_id = a.id LEFT JOIN occurrence_overrides o ON o.workspace_id = s.workspace_id AND o.schedule_id = s.id AND (o.original_date = ? OR o.target_date = ?) WHERE ps.timezone = ? AND a.reminder_enabled = 1 AND a.reminder_time IS NOT NULL AND a.archived_at IS NULL AND (a.goal_id IS NULL OR g.status = 'active') AND s.status = 'planned'",
       )
       .bind(current.date, current.date, timezone)
       .all<DueRow>();
