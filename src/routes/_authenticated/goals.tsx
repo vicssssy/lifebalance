@@ -336,7 +336,6 @@ function GoalsScreen() {
                                         search: {
                                           lifeAreaId: goal.life_area_id,
                                           goalId: goal.id,
-                                          resultText: goal.result_text,
                                         },
                                       })
                                     }

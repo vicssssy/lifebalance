@@ -1,10 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { CheckSquare, Clock, NavArrowRight, Repeat, Sparks, TaskList } from "@/components/ui/icons";
-import { toast } from "sonner";
 import { ACTION_FORMATS, type ActionType } from "@/domain/constants";
-import { createGoal, updateGoal } from "@/data/goals";
-import { useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
+import { useLifeAreas } from "@/hooks/useAppData";
 import { Field, PrimaryButton, TextField } from "@/components/fields";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PageContainer } from "@/components/ui/layout";
@@ -12,6 +10,7 @@ import { StickyActions } from "@/components/StickyActions";
 import type { AppIcon } from "@/components/ui/icon";
 import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
 import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
+import { readNewActionFlowLocationState } from "@/lib/new-action-flow";
 
 export const Route = createFileRoute("/_authenticated/new/")({
   head: () => ({
@@ -41,30 +40,22 @@ const FORMAT_ICON: Record<ActionType, AppIcon> = {
 function NewFlow() {
   const navigate = useNavigate();
   const { data: areas = [] } = useLifeAreas();
+  const flowState = readNewActionFlowLocationState(
+    useLocation({ select: (location) => location.state }),
+  );
 
-  const [step, setStep] = useState<Step>("area");
-  const [lifeAreaId, setLifeAreaId] = useState<string | null>(null);
-  const [goalId, setGoalId] = useState<string | null>(null);
-  const [resultText, setResultText] = useState("");
-  const [goalWhyImportant, setGoalWhyImportant] = useState("");
+  const [step, setStep] = useState<Step>(() => flowState.newActionStep ?? "area");
+  const [lifeAreaId, setLifeAreaId] = useState<string | null>(
+    () => flowState.newActionGoalDraft?.lifeAreaId ?? null,
+  );
+  const [resultText, setResultText] = useState(
+    () => flowState.newActionGoalDraft?.resultText ?? "",
+  );
+  const [goalWhyImportant, setGoalWhyImportant] = useState(
+    () => flowState.newActionGoalDraft?.whyImportant ?? "",
+  );
 
   const area = areas.find((a) => a.id === lifeAreaId) ?? null;
-
-  const saveGoal = usePlannerMutation(
-    async (draft: {
-      goalId: string | null;
-      lifeAreaId: string;
-      resultText: string;
-      whyImportant: string | null;
-    }) => {
-      if (draft.goalId) {
-        await updateGoal(draft.goalId, draft.resultText, draft.whyImportant);
-        return draft.goalId;
-      }
-      const goal = await createGoal(draft);
-      return goal.id;
-    },
-  );
 
   function back() {
     if (step === "area") navigate({ to: "/today" });
@@ -100,7 +91,6 @@ function NewFlow() {
                   type="button"
                   onClick={() => {
                     setLifeAreaId(a.id);
-                    setGoalId(null);
                     setResultText("");
                     setGoalWhyImportant("");
                     setStep("goal");
@@ -143,30 +133,7 @@ function NewFlow() {
             <StickyActions
               hint={resultText.trim() ? undefined : "Сформулируй цель, чтобы продолжить"}
             >
-              <PrimaryButton
-                onClick={() =>
-                  saveGoal.mutate(
-                    {
-                      goalId,
-                      lifeAreaId: area.id,
-                      resultText: resultText.trim(),
-                      whyImportant: goalWhyImportant.trim() || null,
-                    },
-                    {
-                      onSuccess: (savedGoalId) => {
-                        setGoalId(savedGoalId);
-                        setStep("format");
-                      },
-                      onError: (error) =>
-                        toast.error(
-                          error instanceof Error ? error.message : "Не удалось сохранить цель",
-                        ),
-                    },
-                  )
-                }
-                disabled={!resultText.trim() || saveGoal.isPending}
-                loading={saveGoal.isPending}
-              >
+              <PrimaryButton onClick={() => setStep("format")} disabled={!resultText.trim()}>
                 Далее
               </PrimaryButton>
             </StickyActions>
@@ -182,17 +149,23 @@ function NewFlow() {
                   <button
                     key={format.type}
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      const goalDraft = {
+                        id: `new-goal-${crypto.randomUUID()}`,
+                        lifeAreaId: area!.id,
+                        resultText: resultText.trim(),
+                        whyImportant: goalWhyImportant.trim() || null,
+                      };
                       navigate({
                         to: "/new/$type",
                         params: { type: format.type },
                         search: {
                           lifeAreaId: lifeAreaId ?? "",
-                          goalId: goalId ?? undefined,
-                          resultText: resultText.trim(),
+                          goalId: undefined,
                         },
-                      })
-                    }
+                        state: { newActionGoalDraft: goalDraft },
+                      });
+                    }}
                     className="row-card row-card-press flex w-full items-center gap-3 px-4 py-4 text-left"
                   >
                     <FormatIcon

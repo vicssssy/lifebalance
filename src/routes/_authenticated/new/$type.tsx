@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { createAction } from "@/data/actions";
 import { ACTION_FORMAT_NAME, type ActionType } from "@/domain/constants";
@@ -6,6 +6,8 @@ import { useGoals, useLifeAreas, usePlannerMutation } from "@/hooks/useAppData";
 import { ActionForm, type ActionFormValues } from "@/components/ActionForm";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { PageContainer } from "@/components/ui/layout";
+import { readNewActionFlowLocationState } from "@/lib/new-action-flow";
+import type { Goal } from "@/domain/types";
 
 const TYPES: ActionType[] = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 
@@ -13,7 +15,6 @@ export const Route = createFileRoute("/_authenticated/new/$type")({
   validateSearch: (search: Record<string, unknown>) => ({
     lifeAreaId: String(search["lifeAreaId"] ?? ""),
     goalId: search["goalId"] ? String(search["goalId"]) : undefined,
-    resultText: String(search["resultText"] ?? ""),
   }),
   head: ({ params }) => {
     const name = ACTION_FORMAT_NAME[params.type as ActionType] ?? "Новое действие";
@@ -35,20 +36,36 @@ function CreateAction() {
   const navigate = useNavigate();
   const { data: areas = [] } = useLifeAreas();
   const { data: goals = [] } = useGoals();
+  const flowState = readNewActionFlowLocationState(
+    useLocation({ select: (location) => location.state }),
+  );
+  const newGoalDraft = flowState.newActionGoalDraft ?? null;
+  const existingGoal = goals.find((goal) => goal.id === search.goalId) ?? null;
+  const draftGoal: Goal | null = newGoalDraft
+    ? {
+        id: newGoalDraft.id,
+        life_area_id: newGoalDraft.lifeAreaId,
+        result_text: newGoalDraft.resultText,
+        why_important: newGoalDraft.whyImportant,
+        status: "active",
+        created_at: "",
+        completed_at: null,
+        archived_at: null,
+        closed_on: null,
+      }
+    : null;
+  const formGoals = draftGoal ? [draftGoal, ...goals] : goals;
   const type = (TYPES.includes(rawType as ActionType) ? rawType : "task") as ActionType;
 
   const save = usePlannerMutation((values: ActionFormValues) =>
     createAction({
-      goalId: values.goalId,
+      goalId: values.goalId === newGoalDraft?.id ? null : values.goalId,
       newGoal:
-        !search.goalId &&
-        search.resultText &&
-        search.lifeAreaId &&
-        values.lifeAreaId === search.lifeAreaId
+        values.goalId === newGoalDraft?.id && values.lifeAreaId === newGoalDraft.lifeAreaId
           ? {
-              lifeAreaId: search.lifeAreaId,
-              resultText: search.resultText,
-              whyImportant: null,
+              lifeAreaId: newGoalDraft.lifeAreaId,
+              resultText: newGoalDraft.resultText,
+              whyImportant: newGoalDraft.whyImportant,
             }
           : null,
       name: values.name,
@@ -71,21 +88,32 @@ function CreateAction() {
   return (
     <div className="app-screen min-h-dvh bg-background pb-28">
       <ScreenHeader
-        onBack={() => navigate({ to: "/new" })}
+        onBack={() =>
+          navigate({
+            to: "/new",
+            state: newGoalDraft
+              ? { newActionGoalDraft: newGoalDraft, newActionStep: "format" }
+              : {},
+          })
+        }
         eyebrow="Настройка действия"
         title={ACTION_FORMAT_NAME[type]}
-        subtitle={search.resultText ? `Моя цель: ${search.resultText}` : undefined}
+        subtitle={
+          newGoalDraft?.resultText || existingGoal?.result_text
+            ? `Моя цель: ${newGoalDraft?.resultText ?? existingGoal?.result_text}`
+            : undefined
+        }
       />
 
       <PageContainer as="main" className="animate-rise pt-6">
         <ActionForm
           type={type}
           areas={areas}
-          goals={goals}
+          goals={formGoals}
           initial={{
             // Goal text is context only; this field belongs to the Action.
             whyImportant: null,
-            goalId: search.goalId ?? null,
+            goalId: newGoalDraft?.id ?? search.goalId ?? null,
             lifeAreaId: search.lifeAreaId || null,
           }}
           submitting={save.isPending}

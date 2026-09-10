@@ -423,6 +423,72 @@ test("action configuration replaces its life area and keeps the selected goal co
   assert.equal(data.source.actions.find((item) => item.id === action.id).goal_id, otherGoal.id);
 });
 
+test("new Goal is created only with its Action and existing Goals are reused", async (t) => {
+  const { read, mutate, goal } = await workspace(t);
+  const before = await read();
+  const draft = {
+    goalId: null,
+    newGoal: {
+      lifeAreaId: "personal_growth",
+      resultText: "Черновая цель",
+      whyImportant: "Важная причина",
+    },
+    name: "Действие для новой цели",
+    type: "task",
+    description: null,
+    durationSeconds: null,
+    whyImportant: null,
+    helpsWith: null,
+    startDate: "2026-09-01",
+    endDate: null,
+    reminderEnabled: false,
+    reminderTime: null,
+    lifeAreaId: "personal_growth",
+    ritualItems: [],
+    attachments: [],
+    schedules: [
+      {
+        repeat_type: "once",
+        scheduled_date: date,
+        weekdays: [],
+        start_time: null,
+        duration_seconds: null,
+      },
+    ],
+  };
+
+  const action = (await mutate({ type: "createAction", draft })).data;
+  let data = await read();
+  const createdGoal = data.goals.find((item) => item.result_text === "Черновая цель");
+  assert.equal(data.goals.length, before.goals.length + 1);
+  assert.ok(createdGoal);
+  assert.equal(action.goal_id, createdGoal.id);
+  assert.equal(createdGoal.life_area_id, "personal_growth");
+  assert.deepEqual(
+    clone(data.source.actionLifeAreas.filter((item) => item.action_id === action.id)),
+    [{ action_id: action.id, life_area_id: "personal_growth" }],
+  );
+
+  const existingGoalCount = data.goals.length;
+  await mutate({
+    type: "createAction",
+    draft: { ...draft, goalId: goal.id, newGoal: null, lifeAreaId: "body_health" },
+  });
+  data = await read();
+  assert.equal(data.goals.length, existingGoalCount);
+
+  const beforeFailure = clone(data.goals);
+  await mutate(
+    {
+      type: "createAction",
+      draft: { ...draft, lifeAreaId: "body_health" },
+    },
+    400,
+  );
+  data = await read();
+  assert.deepEqual(clone(data.goals), beforeFailure);
+});
+
 test("ritual: partial progress, automatic completion, unchecking, pause and foreign-item rejection", async (t) => {
   const { read, mutate, create, at } = await workspace(t);
   const { action, schedule, items } = await create("ritual");
