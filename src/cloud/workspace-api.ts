@@ -161,57 +161,91 @@ const ritualPatchSchema = z
   .strict()
   .refine((value) => Object.keys(value).length > 0);
 
-const actionDraftSchema = z.object({
-  goalId: id.nullable(),
-  newGoal: z
-    .object({
-      lifeAreaId: id,
-      resultText: z.string().min(1).max(4_000),
-      whyImportant: nullableText(),
-    })
-    .nullable()
-    .optional(),
-  name: z.string().min(1).max(500),
-  type: actionType,
-  description: nullableText(),
-  durationSeconds: nullableNumber,
-  whyImportant: nullableText(),
-  helpsWith: nullableText(),
-  startDate: dateKey,
-  endDate: dateKey.nullable(),
-  reminderEnabled: z.boolean(),
-  reminderTime: z.string().regex(TIME_VALUE).nullable(),
-  lifeAreaId: id,
-  ritualItems: z
-    .array(
-      z.object({
-        name: z.string().min(1).max(500),
-        description: nullableText(),
-        durationSeconds: nullableNumber.optional(),
-      }),
-    )
-    .max(100),
-  attachments: z
-    .array(
-      z.object({
-        type: z.enum(["video", "audio", "link"]),
-        url: z.string().min(1).max(8_000),
-        title: nullableText(1_000),
-      }),
-    )
-    .max(100),
-  schedules: z
-    .array(
-      z.object({
-        repeat_type: z.enum(["once", "weekly"]),
-        scheduled_date: dateKey.nullable(),
-        weekdays: z.array(z.number().int().min(1).max(7)).max(7),
-        start_time: z.string().regex(TIME_VALUE).nullable(),
-        duration_seconds: nullableNumber,
-      }),
-    )
-    .max(100),
-});
+const actionScheduleDraftSchema = z
+  .object({
+    repeat_type: z.enum(["once", "weekly"]),
+    scheduled_date: dateKey.nullable(),
+    weekdays: z.array(z.number().int().min(1).max(7)).max(7),
+    start_time: z.string().regex(TIME_VALUE).nullable(),
+    duration_seconds: nullableNumber,
+  })
+  .superRefine((schedule, context) => {
+    if (schedule.repeat_type === "weekly") {
+      if (schedule.scheduled_date !== null)
+        context.addIssue({
+          code: "custom",
+          message: "У еженедельного расписания не может быть даты.",
+        });
+      if (!schedule.weekdays.length)
+        context.addIssue({ code: "custom", message: "Выбери дни недели для повторения." });
+      return;
+    }
+    if (schedule.scheduled_date === null)
+      context.addIssue({ code: "custom", message: "Выбери дату действия." });
+    if (schedule.weekdays.length)
+      context.addIssue({
+        code: "custom",
+        message: "У разового действия не может быть дней недели.",
+      });
+  });
+
+const actionDraftSchema = z
+  .object({
+    goalId: id.nullable(),
+    newGoal: z
+      .object({
+        lifeAreaId: id,
+        resultText: z.string().min(1).max(4_000),
+        whyImportant: nullableText(),
+      })
+      .nullable()
+      .optional(),
+    name: z.string().min(1).max(500),
+    type: actionType,
+    description: nullableText(),
+    durationSeconds: nullableNumber,
+    whyImportant: nullableText(),
+    helpsWith: nullableText(),
+    startDate: dateKey,
+    endDate: dateKey.nullable(),
+    reminderEnabled: z.boolean(),
+    reminderTime: z.string().regex(TIME_VALUE).nullable(),
+    lifeAreaId: id,
+    ritualItems: z
+      .array(
+        z.object({
+          name: z.string().min(1).max(500),
+          description: nullableText(),
+          durationSeconds: nullableNumber.optional(),
+        }),
+      )
+      .max(100),
+    attachments: z
+      .array(
+        z.object({
+          type: z.enum(["video", "audio", "link"]),
+          url: z.string().min(1).max(8_000),
+          title: nullableText(1_000),
+        }),
+      )
+      .max(100),
+    schedules: z.array(actionScheduleDraftSchema).min(1).max(100),
+  })
+  .superRefine((draft, context) => {
+    const recurring = draft.type === "ritual" || draft.type === "regular_action";
+    if (recurring && (draft.schedules.length !== 1 || draft.schedules[0]?.repeat_type !== "weekly"))
+      context.addIssue({
+        code: "custom",
+        path: ["schedules"],
+        message: "Для повторяющегося действия нужно одно еженедельное расписание.",
+      });
+    if (!recurring && draft.schedules.some((schedule) => schedule.repeat_type !== "once"))
+      context.addIssue({
+        code: "custom",
+        path: ["schedules"],
+        message: "Для разового действия нужны даты выполнения.",
+      });
+  });
 
 const actionConfigurationDraftSchema = z.object({
   goalId: id.nullable(),

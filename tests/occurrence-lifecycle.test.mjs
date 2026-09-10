@@ -187,6 +187,35 @@ async function workspace(t) {
   return { read, mutate, create, at, goal, db };
 }
 
+function newActionDraft({
+  goalId,
+  lifeAreaId = "body_health",
+  newGoal = null,
+  name = "Новое действие для планировщика",
+  type = "task",
+  startDate = date,
+  schedules,
+}) {
+  return {
+    goalId,
+    newGoal,
+    name,
+    type,
+    description: null,
+    durationSeconds: null,
+    whyImportant: null,
+    helpsWith: null,
+    startDate,
+    endDate: null,
+    reminderEnabled: false,
+    reminderTime: null,
+    lifeAreaId,
+    ritualItems: type === "ritual" ? [{ name: "Пункт ритуала", description: null }] : [],
+    attachments: [],
+    schedules,
+  };
+}
+
 for (const type of actionTypes) {
   test(`${type}: completion, skip, move and reopen affect one occurrence only`, async (t) => {
     const { read, mutate, create, at } = await workspace(t);
@@ -464,6 +493,13 @@ test("new Goal is created only with its Action and existing Goals are reused", a
   assert.ok(createdGoal);
   assert.equal(action.goal_id, createdGoal.id);
   assert.equal(createdGoal.life_area_id, "personal_growth");
+  assert.ok(data.source.schedules.some((schedule) => schedule.action_id === action.id));
+  assert.equal(
+    occurrencesForDate({ ...data.source, goals: data.goals }, date, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    true,
+  );
   assert.deepEqual(
     clone(data.source.actionLifeAreas.filter((item) => item.action_id === action.id)),
     [{ action_id: action.id, life_area_id: "personal_growth" }],
@@ -487,6 +523,173 @@ test("new Goal is created only with its Action and existing Goals are reused", a
   );
   data = await read();
   assert.deepEqual(clone(data.goals), beforeFailure);
+});
+
+test("new one-off Action for today persists its schedule and is an active occurrence", async (t) => {
+  const { read, mutate, goal } = await workspace(t);
+  const action = (
+    await mutate({
+      type: "createAction",
+      draft: newActionDraft({
+        goalId: goal.id,
+        schedules: [
+          {
+            repeat_type: "once",
+            scheduled_date: date,
+            weekdays: [],
+            start_time: "08:00",
+            duration_seconds: null,
+          },
+        ],
+      }),
+    })
+  ).data;
+  const data = await read();
+  assert.deepEqual(
+    clone(data.source.schedules.filter((schedule) => schedule.action_id === action.id)),
+    [
+      {
+        id: data.source.schedules.find((schedule) => schedule.action_id === action.id).id,
+        action_id: action.id,
+        repeat_type: "once",
+        scheduled_date: date,
+        weekdays: [],
+        start_time: "08:00",
+        duration_seconds: null,
+        status: "planned",
+      },
+    ],
+  );
+  assert.equal(
+    occurrencesForDate({ ...data.source, goals: data.goals }, date, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    true,
+  );
+});
+
+test("new recurring Action including today persists one weekly schedule and appears today", async (t) => {
+  const { read, mutate, goal } = await workspace(t);
+  const action = (
+    await mutate({
+      type: "createAction",
+      draft: newActionDraft({
+        goalId: goal.id,
+        type: "regular_action",
+        schedules: [
+          {
+            repeat_type: "weekly",
+            scheduled_date: null,
+            weekdays: [3],
+            start_time: null,
+            duration_seconds: null,
+          },
+        ],
+      }),
+    })
+  ).data;
+  const data = await read();
+  const schedules = data.source.schedules.filter((schedule) => schedule.action_id === action.id);
+  assert.equal(schedules.length, 1);
+  assert.equal(schedules[0].repeat_type, "weekly");
+  assert.equal(schedules[0].scheduled_date, null);
+  assert.deepEqual(clone(schedules[0].weekdays), [3]);
+  assert.equal(
+    occurrencesForDate({ ...data.source, goals: data.goals }, date, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    true,
+  );
+});
+
+test("future one-off Action appears only on its selected Calendar date", async (t) => {
+  const { read, mutate, goal } = await workspace(t);
+  const futureDate = "2026-09-12";
+  const action = (
+    await mutate({
+      type: "createAction",
+      draft: newActionDraft({
+        goalId: goal.id,
+        startDate: futureDate,
+        schedules: [
+          {
+            repeat_type: "once",
+            scheduled_date: futureDate,
+            weekdays: [],
+            start_time: null,
+            duration_seconds: null,
+          },
+        ],
+      }),
+    })
+  ).data;
+  const data = await read();
+  const source = { ...data.source, goals: data.goals };
+  assert.equal(
+    occurrencesForDate(source, date, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    false,
+  );
+  assert.equal(
+    occurrencesForDate(source, futureDate, "history").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    true,
+  );
+});
+
+test("recurring Action respects a future start date", async (t) => {
+  const { read, mutate, goal } = await workspace(t);
+  const startDate = "2026-09-11";
+  const action = (
+    await mutate({
+      type: "createAction",
+      draft: newActionDraft({
+        goalId: goal.id,
+        type: "ritual",
+        startDate,
+        schedules: [
+          {
+            repeat_type: "weekly",
+            scheduled_date: null,
+            weekdays: [5],
+            start_time: null,
+            duration_seconds: null,
+          },
+        ],
+      }),
+    })
+  ).data;
+  const data = await read();
+  const source = { ...data.source, goals: data.goals };
+  assert.equal(
+    occurrencesForDate(source, date, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    false,
+  );
+  assert.equal(
+    occurrencesForDate(source, startDate, "active-plan").some(
+      (occurrence) => occurrence.action.id === action.id,
+    ),
+    true,
+  );
+});
+
+test("createAction rejects a draft without a planner schedule", async (t) => {
+  const { read, mutate, goal } = await workspace(t);
+  const before = await read();
+  await mutate(
+    {
+      type: "createAction",
+      draft: newActionDraft({ goalId: goal.id, schedules: [] }),
+    },
+    400,
+  );
+  const after = await read();
+  assert.equal(after.source.actions.length, before.source.actions.length);
+  assert.equal(after.source.schedules.length, before.source.schedules.length);
 });
 
 test("ritual: partial progress, automatic completion, unchecking, pause and foreign-item rejection", async (t) => {
