@@ -32,7 +32,7 @@ import {
 } from "@/domain/schedule";
 import { useLifeAreas, usePlannerMutation, usePlannerSource } from "@/hooks/useAppData";
 import { ActionForm, type ActionFormValues } from "@/components/ActionForm";
-import { LifeAreaCategoryLink } from "@/components/LifeAreaTags";
+import { LifeAreaIconFrame } from "@/components/LifeAreaIcon";
 import { DayPicker, WeekdaySchedule } from "@/components/planning";
 import { DurationWheels, PickerSheet } from "@/components/pickers";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -118,10 +118,13 @@ function ActionDetail() {
     .filter((link) => link.action_id === actionId)
     .map((link) => link.life_area_id);
   const goal = source.goals.find((item) => item.id === action?.goal_id) ?? null;
-  // Legacy actions can retain several links. Editing preserves history until save,
-  // while the active UI uses the goal's area first and otherwise a stable first link.
-  const actionLifeAreaId = goal?.life_area_id ?? actionAreaIds[0] ?? null;
-  const actionAreas = actionLifeAreaId ? areas.filter((area) => area.id === actionLifeAreaId) : [];
+  // A Goal owns the current area when linked. Legacy goal-less Actions with several
+  // saved links have no authoritative current area, so Detail intentionally omits it.
+  const actionLifeAreaId =
+    goal?.life_area_id ?? (actionAreaIds.length === 1 ? (actionAreaIds[0] ?? null) : null);
+  const actionArea = actionLifeAreaId
+    ? (areas.find((area) => area.id === actionLifeAreaId) ?? null)
+    : null;
   const actionIsActive = !action?.goal_id || goal?.status === "active";
   const completed = occurrence?.completed ?? false;
   const itemDone = (itemId: string) =>
@@ -256,6 +259,9 @@ function ActionDetail() {
   }
 
   const durationSeconds = occurrence?.durationSeconds ?? null;
+  const occurrenceTimeIncludesDuration = Boolean(
+    occurrence?.startTime && action.type === "time_slot" && durationSeconds && durationSeconds > 0,
+  );
   const description = action.description?.trim();
   const goalResult = goal?.result_text.trim();
   const whyImportant = action.why_important?.trim();
@@ -373,11 +379,13 @@ function ActionDetail() {
             <h1 className="text-[1.6rem] font-semibold leading-tight tracking-[-0.02em]">
               {action.name}
             </h1>
-            {actionAreas.length ? (
-              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                {actionAreas.map((area) => (
-                  <LifeAreaCategoryLink key={area.id} area={area} />
-                ))}
+            {actionArea ? (
+              <div
+                className="flex items-center gap-2.5"
+                aria-label={`Сфера жизни: ${actionArea.name}`}
+              >
+                <LifeAreaIconFrame area={actionArea} className="size-9 rounded-[14px]" />
+                <span className="text-sm font-semibold text-primary">{actionArea.name}</span>
               </div>
             ) : null}
           </section>
@@ -397,7 +405,7 @@ function ActionDetail() {
                       {timeLabel(occurrence.startTime, durationSeconds)}
                     </MetaChip>
                   ) : null}
-                  {formatDuration(durationSeconds) ? (
+                  {formatDuration(durationSeconds) && !occurrenceTimeIncludesDuration ? (
                     <MetaChip icon={Hourglass}>{formatDuration(durationSeconds)}</MetaChip>
                   ) : null}
                 </div>
@@ -522,40 +530,71 @@ function ActionDetail() {
             </Section>
           ) : null}
 
-          {schedules.some(
-            (entry) =>
-              entry.scheduled_date ||
-              entry.weekdays.length ||
-              entry.start_time ||
-              formatDuration(entry.duration_seconds ?? action.duration_seconds),
-          ) ? (
-            <Section title="Расписание">
-              <div className="content-surface divide-y divide-border/60 rounded-[24px] px-4">
-                {schedules.map((entry) => {
-                  const seconds = entry.duration_seconds ?? action.duration_seconds;
-                  const weekly = entry.repeat_type === "weekly" && entry.weekdays.length > 0;
-                  const days =
-                    entry.repeat_type === "once" && entry.scheduled_date
-                      ? formatDayShort(fromDateKey(entry.scheduled_date))
-                      : "";
-                  const time = timeLabel(entry.start_time, seconds);
-                  const duration = formatDuration(seconds);
-                  if (!weekly && !days && !time && !duration) return null;
-                  return (
-                    <div key={entry.id} className="space-y-1 py-3">
-                      {weekly ? <WeekdaySchedule value={entry.weekdays} /> : null}
-                      {days ? <p className="text-base font-medium">{days}</p> : null}
-                      {time || duration ? (
-                        <p className="text-sm text-muted-foreground">
-                          {[time, duration].filter(Boolean).join(" · ")}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
-          ) : null}
+          {(() => {
+            const recurringSchedule = schedules.find((entry) => entry.repeat_type === "weekly");
+            const oneOffSchedules = schedules.filter((entry) => entry.repeat_type === "once");
+            // The occurrence card owns this one-off schedule's effective date, time
+            // and duration. Other selected one-off dates still belong in the plan.
+            const visibleOneOffSchedules = occurrence
+              ? oneOffSchedules.filter((entry) => entry.id !== occurrence.schedule.id)
+              : oneOffSchedules;
+            const showOneOffSchedules = visibleOneOffSchedules.length > 0;
+            if (!recurringSchedule && !showOneOffSchedules) return null;
+            const entries = recurringSchedule ? [recurringSchedule] : visibleOneOffSchedules;
+            return (
+              <Section title="Расписание">
+                <div className="content-surface divide-y divide-border/60 rounded-[24px] px-4">
+                  {entries.map((entry) => {
+                    const seconds = entry.duration_seconds ?? action.duration_seconds;
+                    const weekly = entry.repeat_type === "weekly" && entry.weekdays.length > 0;
+                    const days =
+                      entry.repeat_type === "once" && entry.scheduled_date
+                        ? formatDayShort(fromDateKey(entry.scheduled_date))
+                        : "";
+                    const time = timeLabel(entry.start_time, seconds);
+                    const duration = formatDuration(seconds);
+                    const timeIncludesDuration = Boolean(
+                      entry.start_time && action.type === "time_slot" && seconds && seconds > 0,
+                    );
+                    if (!weekly && !days && !time && !duration) return null;
+                    return (
+                      <div key={entry.id} className="space-y-1 py-3">
+                        {weekly ? (
+                          <>
+                            <dl className="space-y-1.5 pb-2 text-sm">
+                              <div className="flex items-baseline justify-between gap-3">
+                                <dt className="text-muted-foreground">Дата начала</dt>
+                                <dd className="font-medium">
+                                  {formatDayShort(fromDateKey(action.start_date))}
+                                </dd>
+                              </div>
+                              <div className="flex items-baseline justify-between gap-3">
+                                <dt className="text-muted-foreground">Дата завершения</dt>
+                                <dd className="font-medium">
+                                  {action.end_date
+                                    ? formatDayShort(fromDateKey(action.end_date))
+                                    : "Не ограничена"}
+                                </dd>
+                              </div>
+                            </dl>
+                            <WeekdaySchedule value={entry.weekdays} />
+                          </>
+                        ) : null}
+                        {days ? <p className="text-base font-medium">{days}</p> : null}
+                        {time || (duration && !timeIncludesDuration) ? (
+                          <p className="text-sm text-muted-foreground">
+                            {[time, timeIncludesDuration ? null : duration]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            );
+          })()}
         </PageContainer>
       </main>
 

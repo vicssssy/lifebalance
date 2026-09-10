@@ -14,7 +14,13 @@ const types = ["ritual", "regular_action", "task", "time_slot", "preparation"];
 function fixture(type) {
   return {
     goals: [
-      { id: "g", status: "active", result_text: "Результат цели", why_important: "Смысл цели" },
+      {
+        id: "g",
+        life_area_id: "health",
+        status: "active",
+        result_text: "Результат цели",
+        why_important: "Смысл цели",
+      },
     ],
     actions: [
       {
@@ -148,7 +154,7 @@ for (const type of types) {
       "Моя цель",
       "Почему это важно",
       "Материалы",
-      "Расписание",
+      ...(["ritual", "regular_action", "time_slot"].includes(type) ? ["Расписание"] : []),
     ]);
     const treeNodes = nodes(tree);
     const controlsIndex = treeNodes.findIndex(
@@ -169,7 +175,6 @@ for (const type of types) {
       }
     }
     assert.ok(!text(tree).includes("Смысл цели"));
-    assert.ok(!text(tree).includes("1 августа"));
     assert.ok(
       nodes(tree).some(
         (n) =>
@@ -182,10 +187,18 @@ for (const type of types) {
     if (["ritual", "regular_action"].includes(type)) {
       const weekdaySchedule = nodes(tree).find((n) => n.type === "WeekdaySchedule");
       assert.deepEqual(weekdaySchedule.props.value, [1, 7]);
+      assert.equal(nodes(tree).filter((n) => n.type === "WeekdaySchedule").length, 1);
+      assert.ok(text(tree).includes("Дата начала"));
+      assert.ok(text(tree).includes("1 августа"));
+      assert.ok(text(tree).includes("Дата завершения"));
+      assert.ok(text(tree).includes("Не ограничена"));
+    } else if (type !== "time_slot") {
+      assert.ok(!titles.includes("Расписание"));
     }
     if (type === "time_slot") {
       assert.ok(text(tree).includes("10:00–12:00"));
       assert.ok(text(tree).includes("8 сентября"));
+      assert.ok(!text(tree).includes("2 ч"));
     }
     assert.equal(completeButton(tree).props.variant, "primary");
     if (type === "ritual") {
@@ -233,6 +246,34 @@ test("cancelled schedule never falls back to another schedule", () => {
   source.schedules.push({ ...source.schedules[0], id: "other" });
   source.schedules[0].status = "cancelled";
   assert.equal(completeButton(harness(source)()), undefined);
+});
+test("Action Detail shows one canonical Life Area without category navigation", () => {
+  const tree = harness(fixture("task"))();
+  const frame = nodes(tree).find((node) => node.type === "LifeAreaIconFrame");
+  assert.equal(frame?.props.area.id, "health");
+  assert.equal(nodes(tree).filter((node) => node.type === "LifeAreaCategoryLink").length, 0);
+  assert.ok(text(tree).includes("Здоровье"));
+});
+test("ambiguous goal-less legacy areas are not presented as a current Life Area", () => {
+  const source = fixture("task");
+  source.actions[0].goal_id = null;
+  source.actionLifeAreas = [
+    { action_id: "a", life_area_id: "health" },
+    { action_id: "a", life_area_id: "career" },
+  ];
+  const tree = harness(source)();
+  assert.equal(nodes(tree).filter((node) => node.type === "LifeAreaIconFrame").length, 0);
+});
+test("recurring Detail shows a selected end date and all weekday controls", () => {
+  const source = fixture("regular_action");
+  source.actions[0].end_date = "2026-09-30";
+  const tree = harness(source)();
+  assert.ok(text(tree).includes("30 сентября"));
+  assert.ok(!text(tree).includes("Не ограничена"));
+  assert.match(
+    fs.readFileSync(path.join(root, "src/components/planning.tsx"), "utf8"),
+    /WEEKDAYS\.map\(\(day\)/,
+  );
 });
 test("closed Goal preserves history display without active controls", () => {
   const source = fixture("task");
@@ -290,6 +331,9 @@ test("moved once-only schedule displays and edits its effective date and time", 
   assert.ok(text(tree).includes("8 сентября"));
   assert.ok(!text(tree).includes("6 сентября"));
   assert.ok(text(tree).includes("12:30"));
+  assert.ok(
+    !nodes(tree).some((node) => node.type === "Section" && node.props.title === "Расписание"),
+  );
   const form = nodes(harness(source, { ...search, edit: true })()).find(
     (n) => n.type === "ActionForm",
   );
